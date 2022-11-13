@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO_PATH=$(pwd)
+REPO_PATH=/root/go/src/github.com/image-composer
 export BASE_IMAGE_PATH=${REPO_PATH}
 export BASE_IMAGE_NAME=fedora-coreos-36.20220716.3.1-qemu.x86_64.qcow2
 export IGNITION_PATH=${REPO_PATH}
