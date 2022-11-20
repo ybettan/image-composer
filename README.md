@@ -33,7 +33,7 @@ Edit `fcos-config.fcc` and put your public SSH key in it. Then we are going to
 generate the ignition file from that yaml.
 
 ```
-podman run -i --rm quay.io/coreos/fcct -p -s <fcos-config.fcc > fcos-config.ign
+podman run -i --rm quay.io/coreos/butane -p -s <fcos-config.fcc > fcos-config.ign
 ```
 
 And make sure it was created correctly by inspecting `fcos-config.ign`.
@@ -52,12 +52,31 @@ For now we are just going to disable SELinux.
 ##### Install the virtual machine
 
 ```
-./create-vm
+./vm-create
 ```
 
 Notice that it will take a few minutes to boot. We can get a console using
 ```
 virsh console fcos
+```
+
+Once done, we can delete the VM using `./vm-destroy`.
+
+### Generate the ISO
+
+##### Build the container image
+
+We have a VM running in the background, we will get back to it soon.
+
+Now we are going to build a simple container image that will contain a basic
+golang binary and systemd service in it.
+
+Eventually, we are going to generate a bootable ISO that will be based on that contaienr image.
+
+```
+cd container-image/
+podman build -t quay.io/ybettan/fcos:golang-binary .
+podman push quay.io/ybettan/fcos:golang-binary
 ```
 
 ##### SSH to the machine
@@ -69,18 +88,76 @@ ssh core@<ip>
 sudo su #FIXME: Do we need to be su?
 ```
 
-### Build the container image
-
-Now we are going to build a simple container image that will contains a basic
-golang binary and systemd service in it.
-
-Eventually, we are going to generate a bootable ISO that will be based on that contaienr image.
+##### Create working directory
 
 ```
-cd container-image/
-podman build -t quay.io/ybettan/fcos:golang-binary .
-podman push quay.io/ybettan/fcos:golang-binary
+podman pull quay.io/coreos-assembler/coreos-assembler
 ```
 
-### Generate the ISO
+The coreos-assmebler needs a working directory (same as git does).
+```
+mkdir fcos
+cd fcos
+```
 
+[Go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#create-a-build-working-directory)
+
+##### Defining the cosa alias
+
+Add the following as an alias:
+```
+cosa() {
+   env | grep COREOS_ASSEMBLER
+   local -r COREOS_ASSEMBLER_CONTAINER_LATEST="quay.io/coreos-assembler/coreos-assembler:latest"
+   if [[ -z ${COREOS_ASSEMBLER_CONTAINER} ]] && $(podman image exists ${COREOS_ASSEMBLER_CONTAINER_LATEST}); then
+       local -r cosa_build_date_str="$(podman inspect -f "{{.Created}}" ${COREOS_ASSEMBLER_CONTAINER_LATEST} | awk '{print $1}')"
+       local -r cosa_build_date="$(date -d ${cosa_build_date_str} +%s)"
+       if [[ $(date +%s) -ge $((cosa_build_date + 60*60*24*7)) ]] ; then
+         echo -e "\e[0;33m----" >&2
+         echo "The COSA container image is more that a week old and likely outdated." >&2
+         echo "You should pull the latest version with:" >&2
+         echo "podman pull ${COREOS_ASSEMBLER_CONTAINER_LATEST}" >&2
+         echo -e "----\e[0m" >&2
+         sleep 10
+       fi
+   fi
+   set -x
+   podman run --rm -ti --security-opt label=disable --privileged                                    \
+              --uidmap=1000:0:1 --uidmap=0:1:1000 --uidmap 1001:1001:64536                          \
+              -v ${PWD}:/srv/ --device /dev/kvm --device /dev/fuse                                  \
+              --tmpfs /tmp -v /var/tmp:/var/tmp --name cosa                                         \
+              ${COREOS_ASSEMBLER_CONFIG_GIT:+-v $COREOS_ASSEMBLER_CONFIG_GIT:/srv/src/config/:ro}   \
+              ${COREOS_ASSEMBLER_GIT:+-v $COREOS_ASSEMBLER_GIT/src/:/usr/lib/coreos-assembler/:ro}  \
+              ${COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS}                                            \
+              ${COREOS_ASSEMBLER_CONTAINER:-$COREOS_ASSEMBLER_CONTAINER_LATEST} "$@"
+   rc=$?; set +x; return $rc
+}
+```
+
+This is a bit more complicated than a simple alias, but it allows for hacking on the assembler or the configs and prints out the environment and the command that ultimately gets run. Let's step through each part:
+
+podman run --rm -ti: standard container invocation
+* --privileged: Note we're running as non root, so this is still safe (from the host's perspective)
+* --security-opt label:disable: Disable SELinux isolation so we don't need to relabel the build directory
+* --uidmap=1000:0:1 --uidmap=0:1:1000 --uidmap 1001:1001:64536: map the builder user to root in the user namespace where root in the user namespace is mapped to the calling user from the host. See this well formatted explanation of the complexities of user namespaces in rootless podman.
+* --device /dev/kvm --device /dev/fuse: Bind in necessary devices
+* --tmpfs: We want /tmp to go away when the container restarts; it's part of the "ABI" of /tmp
+* -v /var/tmp:/var/tmp: Some cosa commands may allocate larger temporary files (e.g. supermin; forward this to the host)
+* -v ${PWD}:/srv/: mount local working dir under /srv/ in container
+* --name cosa: just a name, feel free to change it
+
+The environment variables are special purpose:
+
+* COREOS_ASSEMBLER_CONFIG_GIT: Allows you to specifiy a local directory that contains the configs for the ostree you are trying to compose.
+* COREOS_ASSEMBLER_GIT: Allows you to specify a local directory that contains the CoreOS Assembler scripts. This allows for quick hacking on the assembler itself.
+* COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS: Allows for adding arbitrary mounts or args to the container runtime.
+* COREOS_ASSEMBLER_CONTAINER: Allows for overriding the default assembler container which is currently quay.io/coreos-assembler/coreos-assembler:latest.
+
+[go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#define-a-bash-alias-to-run-cosa)
+
+##### Running persistently
+
+At this point, try `cosa shell` to start a shell inside the container.
+From here, you can run `cosa ...` to invoke build commands.
+
+[go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running-persistently)

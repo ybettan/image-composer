@@ -1,0 +1,5 @@
+#!/bin/bash
+
+virsh destroy fcos
+virsh undefine fcos
+virsh vol-delete fcos.img #FIXME: not working
