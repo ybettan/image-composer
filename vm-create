@@ -9,7 +9,7 @@ export IGNITION_FILE=fcos-config.ign
 virt-install \
     --connect qemu:///system \
     --name=fcos \
-    --ram=2048 \
+    --ram=4096 \
     --cpuset=0 \
     --vcpus=2 \
     --os-type=linux \

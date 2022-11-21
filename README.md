@@ -64,21 +64,6 @@ Once done, we can delete the VM using `./vm-destroy`.
 
 ### Generate the ISO
 
-##### Build the container image
-
-We have a VM running in the background, we will get back to it soon.
-
-Now we are going to build a simple container image that will contain a basic
-golang binary and systemd service in it.
-
-Eventually, we are going to generate a bootable ISO that will be based on that contaienr image.
-
-```
-cd container-image/
-podman build -t quay.io/ybettan/fcos:golang-binary .
-podman push quay.io/ybettan/fcos:golang-binary
-```
-
 ##### SSH to the machine
 
 Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SSH to it.
@@ -104,7 +89,7 @@ cd fcos
 
 ##### Defining the cosa alias
 
-Add the following as an alias:
+Add the following as an alias (don't forget to source `~/.aliases`):
 ```
 cosa() {
    env | grep COREOS_ASSEMBLER
@@ -161,3 +146,53 @@ At this point, try `cosa shell` to start a shell inside the container.
 From here, you can run `cosa ...` to invoke build commands.
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running-persistently)
+
+##### Initializing
+
+Initializing will clone the specified configuration repo, and create various directories/state such as the OSTree repository.
+
+```
+$ cosa init https://github.com/coreos/fedora-coreos-config
+```
+
+The specified git repository will be cloned into `$PWD/src/config/`.
+We can see other directories created such as `builds`, `cache`, `overrides` and `tmp`.
+
+[go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#initializing)
+
+##### Build a vanila RHCOS ISO
+
+First, we fetch all the metadata and packages
+
+```
+cosa fetch
+```
+And now we can build from these inputs
+
+```
+cosa build metal
+```
+
+Each build will create a new directory in `${PWD}/builds/`, containing the generated OSTree commit (as a tarball) and the qemu VM image.
+
+Next, rerun cosa build and notice the system correctly deduces that nothing changed.
+You can run `cosa fetch` again to check for updated RPMs.
+
+We should be able to generate the ISO now
+```
+cosa buildextend-live --fast
+```
+
+[go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#performing-a-build)
+
+### Test the ISO
+
+```
+cosa run --qemu-iso builds/latest/x86_64/fedora-coreos-<...>-live.x86_64.iso
+```
+
+This invokes QEMU on the image in `builds/latest`.
+It uses `-snapshot`, so any changes are thrown away after you exit qemu.
+To exit, type `Ctrl-a x`. For more options, type `Ctrl-a ?`.
+
+[go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running)
