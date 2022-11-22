@@ -122,21 +122,21 @@ cosa() {
 This is a bit more complicated than a simple alias, but it allows for hacking on the assembler or the configs and prints out the environment and the command that ultimately gets run. Let's step through each part:
 
 podman run --rm -ti: standard container invocation
-* --privileged: Note we're running as non root, so this is still safe (from the host's perspective)
-* --security-opt label:disable: Disable SELinux isolation so we don't need to relabel the build directory
-* --uidmap=1000:0:1 --uidmap=0:1:1000 --uidmap 1001:1001:64536: map the builder user to root in the user namespace where root in the user namespace is mapped to the calling user from the host. See this well formatted explanation of the complexities of user namespaces in rootless podman.
-* --device /dev/kvm --device /dev/fuse: Bind in necessary devices
-* --tmpfs: We want /tmp to go away when the container restarts; it's part of the "ABI" of /tmp
-* -v /var/tmp:/var/tmp: Some cosa commands may allocate larger temporary files (e.g. supermin; forward this to the host)
-* -v ${PWD}:/srv/: mount local working dir under /srv/ in container
-* --name cosa: just a name, feel free to change it
+* `--privileged`: Note we're running as non root, so this is still safe (from the host's perspective)
+* `--security-opt label:disable`: Disable SELinux isolation so we don't need to relabel the build directory
+* `--uidmap=1000:0:1 --uidmap=0:1:1000 --uidmap 1001:1001:64536`: map the builder user to root in the user namespace where root in the user namespace is mapped to the calling user from the host. See this well formatted explanation of the complexities of user namespaces in rootless podman.
+* `--device /dev/kvm --device /dev/fuse`: Bind in necessary devices
+* `--tmpfs`: We want /tmp to go away when the container restarts; it's part of the "ABI" of /tmp
+* `-v /var/tmp:/var/tmp`: Some cosa commands may allocate larger temporary files (e.g. supermin; forward this to the host)
+* `-v ${PWD}:/srv/`: mount local working dir under /srv/ in container
+* `--name cosa`: just a name, feel free to change it
 
 The environment variables are special purpose:
 
-* COREOS_ASSEMBLER_CONFIG_GIT: Allows you to specifiy a local directory that contains the configs for the ostree you are trying to compose.
-* COREOS_ASSEMBLER_GIT: Allows you to specify a local directory that contains the CoreOS Assembler scripts. This allows for quick hacking on the assembler itself.
-* COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS: Allows for adding arbitrary mounts or args to the container runtime.
-* COREOS_ASSEMBLER_CONTAINER: Allows for overriding the default assembler container which is currently quay.io/coreos-assembler/coreos-assembler:latest.
+* `COREOS_ASSEMBLER_CONFIG_GIT`: Allows you to specifiy a local directory that contains the configs for the ostree you are trying to compose.
+* `COREOS_ASSEMBLER_GIT`: Allows you to specify a local directory that contains the CoreOS Assembler scripts. This allows for quick hacking on the assembler itself.
+* `COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS`: Allows for adding arbitrary mounts or args to the container runtime.
+* `COREOS_ASSEMBLER_CONTAINER`: Allows for overriding the default assembler container which is currently quay.io/coreos-assembler/coreos-assembler:latest.
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#define-a-bash-alias-to-run-cosa)
 
