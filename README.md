@@ -62,7 +62,7 @@ virsh console fcos
 
 Once done, we can delete the VM using `./vm-destroy`.
 
-### Generate the ISO
+### Set up the environment
 
 ##### SSH to the machine
 
@@ -70,7 +70,6 @@ Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SS
 
 ```
 ssh core@<ip>
-sudo su #FIXME: Do we need to be su?
 ```
 
 ##### Create working directory
@@ -152,7 +151,7 @@ From here, you can run `cosa ...` to invoke build commands.
 Initializing will clone the specified configuration repo, and create various directories/state such as the OSTree repository.
 
 ```
-$ cosa init https://github.com/coreos/fedora-coreos-config
+cosa init https://github.com/coreos/fedora-coreos-config
 ```
 
 The specified git repository will be cloned into `$PWD/src/config/`.
@@ -160,7 +159,7 @@ We can see other directories created such as `builds`, `cache`, `overrides` and 
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#initializing)
 
-##### Build a vanila RHCOS ISO
+### Generate a vanila FCOS ISO
 
 First, we fetch all the metadata and packages
 
@@ -184,6 +183,29 @@ cosa buildextend-live --fast
 ```
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#performing-a-build)
+
+### Generate a falvored FCOS ISO by changing the config repo
+
+##### Prerequisites
+
+We will need to install the `libblkid-devel` package first.
+```
+sudo yum install libblkid-devel
+```
+
+##### Add a new overlay
+
+FIXME: add a real overly instead of just updating the README.
+FIXME: update the `05core` overlay instead of `15fcos`
+Add some lines to `src/config/overlay.d/15fcos/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md` and then run
+```
+cosa fetch # do we need fetch?
+cosa build metal
+cosa buildextend-live --fast
+```
+
+Running a VM with that ISO should conain the updated `/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md`
+on the new filesystem.
 
 ### Test the ISO
 
