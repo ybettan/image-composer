@@ -62,7 +62,7 @@ virsh console fcos
 
 Once done, we can delete the VM using `./vm-destroy`.
 
-### Generate the ISO
+### Set up the environment
 
 ##### SSH to the machine
 
@@ -70,7 +70,6 @@ Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SS
 
 ```
 ssh core@<ip>
-sudo su #FIXME: Do we need to be su?
 ```
 
 ##### Create working directory
@@ -160,7 +159,7 @@ We can see other directories created such as `builds`, `cache`, `overrides` and 
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#initializing)
 
-##### Build a vanila RHCOS ISO
+### Generate a vanila FCOS ISO
 
 First, we fetch all the metadata and packages
 
@@ -184,6 +183,142 @@ cosa buildextend-live --fast
 ```
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#performing-a-build)
+
+### Generate a falvored FCOS ISO by changing the config repo
+
+This is not very interesting for our use case. For fcos updates based on a container skip to the next section.
+
+##### Prerequisites
+
+We will need to install the `libblkid-devel` package first.
+```
+sudo yum install libblkid-devel`
+```
+
+##### Add a new overlay
+
+FIXME: add a real overly instead of just updating the README.
+Add some lines to `src/config/overlay.d/15fcos/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md` and then run
+```
+cosa build metal
+cosa buildextend-live --fast
+```
+
+Running a VM with that ISO should conain the updated `/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md`
+on the new filesystem.
+
+### Generate a falvored FCOS ISO by adding layers to the ociarchive
+
+##### Prerequisites
+
+We need to install [umoci](https://github.com/opencontainers/umoci).
+
+##### Some background regarding OCI
+
+First let's extract the `ociarchive` content and inspect it.
+```
+mkdir fedora-coreos-image-spec
+tar -xvf builds/latest/x86_64/fedora-coreos-<...>.dev.0-ostree.x86_64.ociarchive -C fedora-coreos-image-spec
+cd fedora-coreos-image-spec
+```
+
+The `index.json` file, represent the manifest list. In simple words:
+* each manifest is a container image.
+* if we have multiple tags of an image then it translates to multiple manifests in the list while the tag is basically just an annotation
+* if the image was build for multiple architectures then we will have a manifest for each one of them.
+In our case we just have a single manifest in the list:
+```
+[coreos-assembler]$ cat index.json | jq
+{
+  "schemaVersion": 2,
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:966201aea4e72921d1dce4507dbba0d897548d886a7096f46b8277fb522dc4fa",
+      "size": 8261,
+      "annotations": {
+        "org.opencontainers.image.ref.name": "latest"
+      }
+    }
+  ]
+}
+```
+
+In order to see the content of that manifest we can run:
+```
+[coreos-assembler]$ cat blobs/sha256/966201aea4e72921d1dce4507dbba0d897548d886a7096f46b8277fb522dc4fa | jq
+{
+  "config": {
+    "digest": "sha256:84661e522cea1b3c7ae4ed5448cb10a07563b4dee8279e51534a4cfab5d0dc74",
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "size": 9263
+  },
+  "layers": [
+    {
+      "digest": "sha256:9369a43f5a039727eb5b261aab08895eec7223706a1f50df2caaaf55164550f4",
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 1386874
+    },
+...
+    {
+      "digest": "sha256:c636c65de0175b318308a9779a412720e1d572ac5f44c766a690a8491ba40e61",
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 70015163
+    }
+  ],
+  "schemaVersion": 2
+}
+```
+
+The manifest containes 2 parts, the `config` file and the `layers` list.
+
+The `config` file is also located in `blobs/sha256` and contains all the infor required for running the container such
+as the cmd, env variables, exposed ports, mounted volumes etx.
+
+The `layers` list is a list of layers (blobs) for which each layer contains the diff from the previous layer in the filesystem.
+
+##### Adding a layer to the manifest
+
+Let's now add a new layer to the image manifest. For simplicity we are just going to add a new file in `/var/`.
+
+In case `builds/latest/x86_64/fedora-coreos-<...>.dev.0-ostree.x86_64.ociarchive` wasn't extracted as mentioned before, then do it now.
+
+For the following steps, let's make sure we are root.
+```
+sudo su
+```
+
+Before making changes to the container filesystem, we need to unpack the [image-spec](https://github.com/opencontainers/image-spec) to a [runtime-spec](https://github.com/opencontainers/runtime-spec/blob/main/spec.md). This can simple be achieved by running:
+```
+umoci unpack --image fedora-coreos-image-spec:latest fedora-coreos-runtime-spec
+```
+
+Now we can make some modification to the `rootfs`.
+```
+echo "ybettan was here" > fedora-coreos-runtime-spec/rootfs/var/ybettan.txt
+```
+
+And repack the new runtime-spec into a new image-spec overriding the `latest` tag.
+Note: we can also `repack` into a new tag but then we will need to modify the `coreos-assembler` to pick that new tag, therefore, overriding the `latest` tag seems to be the simplest approach here.
+```
+umoci repack --image fedora-coreos-image-spec:latest fedora-coreos-runtime-spec
+rm -rf fedora-coreos-runtime-spec
+```
+
+Now we need to go back to the `builder` user (in the `cosa` container) for the rest of the flow to work.
+```
+Ctrl-D
+```
+
+All we have left now is to re-complress the image-spec and override the `.ociarchive`.
+```
+cd fedora-coreos-image-spec
+tar -cvf ../builds/latest/x86_64/fedora-coreos-37.20221208.dev.1-ostree.x86_64.ociarchive *
+cd ../
+rm -rf fedora-coreos-image-spec
+```
+
+All we need to do at this point is to re-generate the ISO, run it in Qemu and check the `/var` to see if our file is there.
 
 ### Test the ISO
 
