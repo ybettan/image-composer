@@ -195,16 +195,44 @@ sudo yum install libblkid-devel
 
 ##### Add a new overlay
 
-FIXME: add a real overly instead of just updating the README.
-FIXME: update the `05core` overlay instead of `15fcos`
-Add some lines to `src/config/overlay.d/15fcos/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md` and then run
+We are going to add a new `06-core-extensions` overlay to the config repo which
+will contain a new kernel module that will be loaded at boot time to the machine.
 ```
-cosa fetch # do we need fetch?
+mkdir -p src/config/overlay.d/06core-extensions
+```
+We will also add an empty `statoverride` file to it.
+```
+echo "
+# Config file for overriding permission bits on overlay files/dirs
+# Format: =<file mode in decimal> <absolute path to a file or directory>
+" > src/config/overlay.d/06core-extensions/statoverride
+```
+
+FIXME: use a real .ko file and a real kernel-version
+Let's add the `.ko` file
+```
+mkdir -p src/config/overlay.d/06core-extensions/usr/lib/modules/dummy-kernel-version
+echo dummy ko file > src/config/overlay.d/06core-extensions/usr/lib/modules/dummy-kernel-version/simple-kmod.ko
+```
+
+FIXME: run the depmod command
+Also, we need to add configuration for loading that `.ko` file at boot time
+```
+mkdir -p src/config/overlay.d/06core-extensions/etc/modules-load.d
+echo simple_kmod > src/config/overlay.d/06core-extensions/etc/modules-load.d/simple_kmod.conf
+#depmod -a "${KERNEL_VERSION}" && echo simple_kmod > src/config/overlay.d/06core-extensions/etc/modules-load.d/simple_kmod.conf
+```
+
+Now we can generate the ISO
+```
+cosa fetch
 cosa build metal
 cosa buildextend-live --fast
 ```
 
-Running a VM with that ISO should conain the updated `/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md`
+Running a VM with that ISO should conain the updated:
+* `/usr/lib/modules/dummy-kernel-version/simple-kmod.ko`
+* `/etc/modules-load.d/simple_kmod.conf`
 on the new filesystem.
 
 ### Test the ISO
