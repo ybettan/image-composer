@@ -193,18 +193,33 @@ We will need to install the `libblkid-devel` package first.
 sudo yum install libblkid-devel
 ```
 
-##### Add a new overlay
+##### Add overrides to the config repo
 
-FIXME: add a real overly instead of just updating the README.
-FIXME: update the `05core` overlay instead of `15fcos`
-Add some lines to `src/config/overlay.d/15fcos/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md` and then run
+FIXME: use a real .ko file and a real kernel-version
+Let's add the `.ko` file
 ```
-cosa fetch # do we need fetch?
+mkdir -p overrides/rootfs/usr/lib/modules/dummy-kernel-version
+echo dummy ko file > overrides/rootfs/usr/lib/modules/dummy-kernel-version/simple-kmod.ko
+```
+
+FIXME: run the depmod command
+Also, we need to add configuration for loading that `.ko` file at boot time
+```
+mkdir -p overrides/rootfs/etc/modules-load.d
+echo simple_kmod > overrides/rootfs/etc/modules-load.d/simple_kmod.conf
+#depmod -a "${KERNEL_VERSION}" && echo simple_kmod > overrides/rootfs/etc/modules-load.d/simple_kmod.conf
+```
+
+Now we can generate the ISO
+```
+cosa fetch
 cosa build metal
 cosa buildextend-live --fast
 ```
 
-Running a VM with that ISO should conain the updated `/usr/lib/dracut/modules.d/50ignition-conf-fcos/README.md`
+Running a VM with that ISO should conain the updated:
+* `/usr/lib/modules/dummy-kernel-version/simple-kmod.ko`
+* `/etc/modules-load.d/simple_kmod.conf`
 on the new filesystem.
 
 ### Test the ISO
