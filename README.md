@@ -186,28 +186,42 @@ cosa buildextend-live --fast
 
 ### Generate a falvored FCOS ISO by changing the config repo
 
-##### Prerequisites
-
-We will need to install the `libblkid-devel` package first.
-```
-sudo yum install libblkid-devel
-```
-
 ##### Add overrides to the config repo
 
-FIXME: use a real .ko file and a real kernel-version
-Let's add the `.ko` file
+First we need to find what kernel version we are building our ISO with.
 ```
-mkdir -p overrides/rootfs/usr/lib/modules/dummy-kernel-version
-echo dummy ko file > overrides/rootfs/usr/lib/modules/dummy-kernel-version/simple-kmod.ko
+export KERNEL_VERSION=$(cat src/config/manifest-lock.x86_64.json | jq -r '.packages.kernel.evra')
 ```
 
-FIXME: run the depmod command
+We should also install the kernel packages required for this version
+```
+sudo dnf install -y kernel-devel-${KERNEL_VERSION}
+```
+
+Now, let us build the kernel module:
+```
+cd ../
+git clone https://github.com/rh-ecosystem-edge/kernel-module-management.git
+cd kernel-module-management/ci/kmm-kmod/
+KERNEL_SRC_DIR=/lib/modules/${KERNEL_VERSION}/build make all
+```
+
+Once build, we will add the `.ko` file to the ISO rootFS
+```
+cd ../../../fcos
+mkdir -p overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
+cp ../kernel-module-management/ci/kmm-kmod/kmm_ci_a.ko overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
+```
+
 Also, we need to add configuration for loading that `.ko` file at boot time
 ```
 mkdir -p overrides/rootfs/etc/modules-load.d
-echo simple_kmod > overrides/rootfs/etc/modules-load.d/simple_kmod.conf
-#depmod -a "${KERNEL_VERSION}" && echo simple_kmod > overrides/rootfs/etc/modules-load.d/simple_kmod.conf
+echo kmm_ci_a > overrides/rootfs//etc/modules-load.d/kmm_ci_a.conf
+```
+
+We should also run `depmod` to make sure all necessary files are created correctly.
+```
+sudo depmod -b /usr ${KERNEL_VERSION}
 ```
 
 Now we can generate the ISO
@@ -217,10 +231,12 @@ cosa build metal
 cosa buildextend-live --fast
 ```
 
-Running a VM with that ISO should conain the updated:
-* `/usr/lib/modules/dummy-kernel-version/simple-kmod.ko`
-* `/etc/modules-load.d/simple_kmod.conf`
-on the new filesystem.
+Running a VM with that ISO should load the kernel module at boot. It can be validated
+using
+```
+lsmod | grep kmm_ci_a
+```
+in the VM.
 
 ### Test the ISO
 
