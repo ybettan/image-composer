@@ -219,3 +219,53 @@ It uses `-snapshot`, so any changes are thrown away after you exit qemu.
 To exit, type `Ctrl-a x`. For more options, type `Ctrl-a ?`.
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running)
+
+### Running with assisted-test-infra
+
+The default iso type is `minimal-iso` and we built a full-iso so we need to change it.
+```
+export ISO_IMAGE_TYPE=full-iso
+```
+
+Run assisted-service
+```
+export PULL_SECRET=...
+make setup
+make run
+```
+
+Mount the custom ISO to the `assisted-image-service` pod and make sure to override
+`data/rhcos-full-iso-...-x86_64.iso` (keep the same name) with the custom ISO.
+
+Here is a reference to mounting a local directory
+```
+spec:
+  containers:
+  - name: ...
+    image: ...
+    ports:
+    - containerPort: 80
+    volumeMounts:
+      - name: host-mount
+        mountPath: /usr/share/nginx/html/static
+  volumes:
+    - name: host-mount
+      hostPath:
+        path: /Users/jyee/code/simplest-k8s/host-mount
+```
+
+We will also need the `minikube cp` command to copy the ISO to the minikube VM.
+```
+minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202307060850-0-live.x86_64.iso
+```
+
+Then we can
+```
+make deploy_nodes_with_install NUM_MASTERS=1
+```
+
+We can validate that test-infra is indeed using the correct iso by making sure the ISO
+file has the same size as our ISO.
+```
+ls -lh /tmp/test_images/
+```
