@@ -261,6 +261,24 @@ We will also need the `minikube cp` command to copy the ISO to the minikube VM.
 minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202307060850-0-live.x86_64.iso
 ```
 
+We also need to create a `MachineConfig` manifest to override the image in MCO.
+MCO is overriding the node image with the `machine-os-content` from the release image,
+therefore, we need to make sure MCO is aware we are overriding the node image.
+
+We need to build the container image first
+```
+sudo podman login quay.io
+tar -xvf builds/latest/x86_64/rhcos-413.92.202307060850-0-ostree.x86_64.ociarchive -C rhcos-image-spec
+sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:413.92.202307060850-0
+```
+
+Now we need to create the `MachineConfig` manifest and add it to assisted
+```
+mkdir -p ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift
+cp machineconfig.yaml ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift/
+export CUSTOM_MANIFESTS_FILES=$(realpath ~/go/src/github.com/assisted-test-infra/custom_manifests)
+```
+
 Then we can
 ```
 make deploy_nodes_with_install NUM_MASTERS=1
@@ -270,4 +288,29 @@ We can validate that test-infra is indeed using the correct iso by making sure t
 file has the same size as our ISO.
 ```
 ls -lh /tmp/test_images/
+```
+
+Once the cluster installed we can validate that our kernel-module is indeed installed
+```
+root assisted-test-infra (master) $ oc get nodes
+NAME                                   STATUS   ROLES                         AGE   VERSION
+test-infra-cluster-2d9248b4-master-0   Ready    control-plane,master,worker   47m   v1.26.6+a7ee68b
+
+root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0 -- chroot /host rpm-ostree status
+Starting pod/test-infra-cluster-2d9248b4-master-0-debug ...
+To use host binaries, run `chroot /host`
+State: idle
+Deployments:
+* ostree-unverified-registry:quay.io/ybettan/rhcos:413.92.202307060850-0
+                   Digest: sha256:39c0aaa7baae5799d7eca830f230a486b62712e742aabd466f6ce0e16712a6c9
+                  Version: 413.92.202307060850-0 (2023-07-10T08:02:35Z)
+
+Removing debug pod ...
+
+root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0 -- chroot /host lsmod | grep kmm
+Starting pod/test-infra-cluster-2d9248b4-master-0-debug ...
+To use host binaries, run `chroot /host`
+kmm_ci_a               16384  0
+
+Removing debug pod ...
 ```
