@@ -190,9 +190,11 @@ overrides/
 │   └── usr
 │       └── lib
 │           └── modules
-│               └── 6.3.10-200.fc38.x86_64
+│               └── 5.14.0-284.22.1.el9_2.x86_64
 │                   └── kmm_ci_a.ko
 └── rpm
+
+9 directories, 2 files
 ```
 
 Now we can generate the ISO
