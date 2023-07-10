@@ -296,21 +296,21 @@ root assisted-test-infra (master) $ oc get nodes
 NAME                                   STATUS   ROLES                         AGE   VERSION
 test-infra-cluster-2d9248b4-master-0   Ready    control-plane,master,worker   47m   v1.26.6+a7ee68b
 
-root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0 -- chroot /host rpm-ostree status
+root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0
 Starting pod/test-infra-cluster-2d9248b4-master-0-debug ...
 To use host binaries, run `chroot /host`
+Pod IP: 192.168.127.10
+If you don't see a command prompt, try pressing enter.
+
+sh-4.4# chroot /host
+
+sh-5.1# rpm-ostree status
 State: idle
 Deployments:
 * ostree-unverified-registry:quay.io/ybettan/rhcos:413.92.202307060850-0
                    Digest: sha256:39c0aaa7baae5799d7eca830f230a486b62712e742aabd466f6ce0e16712a6c9
                   Version: 413.92.202307060850-0 (2023-07-10T08:02:35Z)
 
-Removing debug pod ...
-
-root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0 -- chroot /host lsmod | grep kmm
-Starting pod/test-infra-cluster-2d9248b4-master-0-debug ...
-To use host binaries, run `chroot /host`
+sh-5.1# lsmod | grep kmm
 kmm_ci_a               16384  0
-
-Removing debug pod ...
 ```
