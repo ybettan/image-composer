@@ -314,3 +314,7 @@ Deployments:
 sh-5.1# lsmod | grep kmm
 kmm_ci_a               16384  0
 ```
+
+### Links
+
+* A [POC](https://gitlab.cee.redhat.com/jmeng/ovs-ci-with-ocp) for modifying OVS and its kernel module with OCP
