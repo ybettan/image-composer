@@ -130,8 +130,7 @@ We can see other directories created such as `builds`, `cache`, `overrides` and 
 
 ### Generate a falvored RHCOS ISO by changing the config repo
 
-FIXME: the current instructions are only modifying the rootFS but we also need to modify the initramFS in some cases
-##### Add overrides to the config repo
+##### Build a kernel module to be added to RHCOS
 
 First we need to find what kernel version we are building our ISO with.
 ```
@@ -160,11 +159,13 @@ cd kernel-module-management/ci/kmm-kmod/
 KERNEL_SRC_DIR=/lib/modules/${KERNEL_VERSION}/build make all
 ```
 
+##### Add overrides to the config repo - rootFS
+
 Go back to the `cosa shell` and make sure to copy the relevant files.
 
 Once build, we will add the `.ko` file to the ISO rootFS
 ```
-cd ../../../fcos
+cd ../../../rhcos
 mkdir -p overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
 cp ../kernel-module-management/ci/kmm-kmod/kmm_ci_a.ko overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
 ```
@@ -172,7 +173,7 @@ cp ../kernel-module-management/ci/kmm-kmod/kmm_ci_a.ko overrides/rootfs/usr/lib/
 Also, we need to add configuration for loading that `.ko` file at boot time
 ```
 mkdir -p overrides/rootfs/etc/modules-load.d
-echo kmm_ci_a > overrides/rootfs//etc/modules-load.d/kmm_ci_a.conf
+echo kmm_ci_a > overrides/rootfs/etc/modules-load.d/kmm_ci_a.conf
 ```
 
 We should also run `depmod` to make sure all necessary files are created correctly.
@@ -210,10 +211,69 @@ lsmod | grep kmm_ci_a
 ```
 in the VM.
 
+##### Add overrides to the config repo - initramFS
+
+Go back to the `cosa shell` and make sure to copy the relevant files.
+
+Once build, we will add the `.ko` file to the ISO
+```
+cd ../../../rhcos
+mkdir -p overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
+cp ../kernel-module-management/ci/kmm-kmod/kmm_ci_a.ko overrides/rootfs/usr/lib/modules/${KERNEL_VERSION}
+```
+
+Also, we need to add configuration for loading that `.ko` file at initramFS time
+```
+mkdir -p overrides/rootfs/usr/lib/dracut/dracut.conf.d
+echo 'force_drivers+=" kmm_ci_a "' > overrides/rootfs/usr/lib/dracut/dracut.conf.d/dracut.conf
+```
+
+We should also run `depmod` to make sure all necessary files are created correctly.
+```
+sudo depmod -b /usr ${KERNEL_VERSION}
+```
+
+```
+[coreos-assembler]$ tree overrides/
+overrides/
+├── rootfs
+│   └── usr
+│       └── lib
+│           ├── dracut
+│           │   └── dracut.conf.d
+│           │       └── dracut.conf
+│           └── modules
+│               └── 5.14.0-284.22.1.el9_2.x86_64
+│                   └── kmm_ci_a.ko
+└── rpm
+
+9 directories, 2 files
+```
+
+Now we can generate the ISO
+```
+cosa build metal metal4k
+cosa buildextend-live
+```
+
+Before running the ISO, let's make sure that our `.ko` file has been added to
+the initramfs
+```
+lsinitrd builds/latest/x86_64/rhcos-413.92.202307120939-0-live-initramfs.x86_64.img | grep kmm_ci_a
+-rw-r--r--   1 root     root        67704 Jan  1  1970 usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/kmm_ci_a.ko
+```
+
+Running a VM with that ISO should load the kernel module at boot. It can be validated
+using
+```
+lsmod | grep kmm_ci_a
+```
+in the VM.
+
 ### Test the ISO
 
 ```
-cosa run --qemu-iso builds/latest/x86_64/fedora-coreos-<...>-live.x86_64.iso
+cosa run --qemu-iso builds/latest/x86_64/rhcos-<...>-live.x86_64.iso
 ```
 
 This invokes QEMU on the image in `builds/latest`.
@@ -245,15 +305,13 @@ spec:
   containers:
   - name: ...
     image: ...
-    ports:
-    - containerPort: 80
     volumeMounts:
-      - name: host-mount
-        mountPath: /usr/share/nginx/html/static
-  volumes:
     - name: host-mount
-      hostPath:
-        path: /Users/jyee/code/simplest-k8s/host-mount
+      mountPath: /isos
+  volumes:
+  - name: host-mount
+    hostPath:
+      path: /home/docker/isos
 ```
 
 We will also need the `minikube cp` command to copy the ISO to the minikube VM.
@@ -262,14 +320,16 @@ minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/
 ```
 
 We also need to create a `MachineConfig` manifest to override the image in MCO.
-MCO is overriding the node image with the `machine-os-content` from the release image,
-therefore, we need to make sure MCO is aware we are overriding the node image.
+MCO is overriding the node image with the `rhel-coreos` (previously called `machine-os-content`)
+from the release image, therefore, we need to make sure MCO is aware we are
+overriding the node image.
 
 We need to build the container image first
 ```
 sudo podman login quay.io
-tar -xvf builds/latest/x86_64/rhcos-413.92.202307060850-0-ostree.x86_64.ociarchive -C rhcos-image-spec
-sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:413.92.202307060850-0
+mkdir rhcos-image-spec
+tar -xvf builds/latest/x86_64/rhcos-<...>-ostree.x86_64.ociarchive -C rhcos-image-spec
+sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
 ```
 
 Now we need to create the `MachineConfig` manifest and add it to assisted
@@ -313,6 +373,13 @@ Deployments:
 
 sh-5.1# lsmod | grep kmm
 kmm_ci_a               16384  0
+```
+
+And if the kernel-module was installed at the initramfs stage we can also validate
+that our `.ko` file is part of the `initramfs.img`
+```
+sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | grep kmm_ci_a
+-rw-r--r--   1 root     root        67704 Jan  1  1970 usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/kmm_ci_a.ko
 ```
 
 ### Links
