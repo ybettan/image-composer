@@ -1,0 +1,4 @@
+#!/bin/bash
+
+virsh destroy r4e
+virsh undefine r4e --nvram

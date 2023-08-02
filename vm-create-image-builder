@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ISO=$1
+
+virt-install \
+    --boot uefi \
+    --name r4e \
+    --memory 2048 --vcpus 2 \
+    --disk size=20 \
+    --cdrom ${ISO} \
+    --os-variant rhel9.0 \
+    &
+
+#virt-install --boot uefi \
+#    --name VM_NAME --memory 2048 --vcpus 2 \
+#    --disk size=20,path=/path/to/diskfile.qcow2 --cdrom /path/to/UUID-installer.iso \
+#    --os-variant rhel9.0
