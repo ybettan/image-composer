@@ -181,4 +181,5 @@ journalctl -t osbuild-worker
 
 ### Links
 
+* [image-builder docs](https://www.osbuild.org/guides/introduction.html)
 * https://github.com/kwozyman/rhel-edge-demo
