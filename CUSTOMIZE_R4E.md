@@ -67,6 +67,13 @@ Now, we can download the edge-container image
 composer-cli compose image <id>
 ```
 
+We can also use
+```
+composer-cli compose results <id>
+```
+to gat a `tar` that will contain both, the image and additional data such as
+the `json` pipeline for `osbuild` and the logs.
+
 We can start the image using `podman`
 ```
 podman load -i <tar-file>
@@ -100,6 +107,10 @@ composer-cli compose status
 Onced finished, download the ISO
 ```
 composer-cli compose image <id>
+```
+or
+```
+composer-cli compose results <id>
 ```
 
 ### Summarizing moving parts
