@@ -49,8 +49,30 @@ composer-cli blueprints depsolve kmm-kmod-container
 
 ### Edge-container creation
 
-In order for the installer image to be built, we need a http server with the base OS layer.
-This sounds complicated, but Red Hat offers an easy container with a web server and the desired files
+OSTree commits aren't bootable artifacts.
+In order to "boot" them we need:
+* An http server with the OSTree commit
+* An installation ISO
+* A kickstart file that instructs Anaconda (Fedora installer) to use the OSTree commit from the HTTP server
+
+```
+ _________________          ____________________________
+|                 |        |                            |
+|                 |------->| Fedora VM with mounted ISO |
+|                 |        |  - Anaconda                |
+|  Fedora Host OS |        |____________________________|
+|                 |                |
+|                 |         _______|________________________
+|                 |        |                                |
+|                 |------->| Fedora container running httpd |
+|_________________|        |  serving content of the tarball|
+                           |  and the kickstart file        |
+                           |________________________________|
+```
+
+This sounds complicated, but `osbuild-composer` offers an easy way to generate a
+container with a web server and the desired OSTree commit. We will use the `composer-cli`
+to generate this container on the `osbuild-composer` service.
 ```
 composer-cli compose start kmm-kmod-container edge-container
 ```
