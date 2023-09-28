@@ -1,0 +1,5 @@
+#!/bin/bash
+
+virsh destroy rhcos-from-raw-disk
+virsh undefine rhcos-from-raw-disk --nvram
+rm /var/lib/libvirt/images/rhcos-from-raw-disk.qcow2

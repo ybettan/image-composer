@@ -1,0 +1,23 @@
+#!/bin/bash
+
+REPO_PATH=/root/go/src/github.com/image-composer
+export BASE_IMAGE_PATH=${REPO_PATH}
+export BASE_IMAGE_NAME=rhcos-413.92.202309181330-0-qemu.x86_64.qcow2
+export IGNITION_PATH=${REPO_PATH}
+export IGNITION_FILE=discovery.ign
+#Create the VM with virt-install
+virt-install \
+    --boot uefi \
+    --connect qemu:///system \
+    --name=rhcos-from-raw-disk \
+    --ram=4096 \
+    --cpuset=0 \
+    --vcpus=2 \
+    --os-type=linux \
+    --os-variant=fedora30 \
+    --graphics=none \
+    --import \
+    --disk size=30,readonly=false,backing_store=${BASE_IMAGE_PATH}/${BASE_IMAGE_NAME},serial=WD-WMAP9A966149 \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_PATH}/${IGNITION_FILE}" \
+    &
+
