@@ -401,22 +401,22 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | g
 -rw-r--r--   1 root     root        67704 Jan  1  1970 usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/kmm_ci_a.ko
 ```
 
-### Running with assisted-service and a raw disk image
+### Running with assisted-service and a custom disk image
 
 Start assisted-service using `make run` in assisted-test-infra.
 
 Create a new infra-env and then download the discovery ignition
 ```
-curl <service IP:port>/api/assisted-install/v2/infra-envs/<infra env id>/downloads/files?file_name=discovery.ign
+curl <service IP:port>/api/assisted-install/v2/infra-envs/<infra env id>/downloads/files?file_name=discovery.ign -o discovery.ign
 ```
 
-Now we will spawn a VM with
-*. a custome raw disk image to boot
+Now we will spawn a VM with a custome disk image to boot
 
-We will use [vm-create-rhcos-disk-image](./vm-create-rhcos-disk-image) to boot the machine and when
-the machine boot press F12 to enter the firmware settings.
+We will use [vm-create-rhcos-disk-image](./vm-create-rhcos-disk-image) to boot the machine.
 
-Go to secureboot option and disable it (unpress the "attempt secure boot" botton)
+Restrictions:
+* This will not work with a raw disk image
+* This will not work with PXE
 
 ### Links
 

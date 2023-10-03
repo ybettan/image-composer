@@ -8,6 +8,8 @@ export IGNITION_FILE=discovery.ign
 #Create the VM with virt-install
 virt-install \
     --boot uefi \
+    --boot loader_secure=no \
+    --boot nvram.template=/usr/share/edk2/ovmf/OVMF_VARS.fd \
     --connect qemu:///system \
     --name=rhcos-from-raw-disk \
     --ram=4096 \
