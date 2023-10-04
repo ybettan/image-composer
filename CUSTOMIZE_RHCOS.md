@@ -426,6 +426,17 @@ kcli console --serial rhcos-disk-image
 kcli ssh rhcos-disk-image
 ```
 
+Now we need to wait for the cluster to be in the following status
+```
+status: ready
+status_info: Cluster ready to be installed
+```
+
+and then we can install the cluster using
+```
+aicli start cluster custom-rhcos-disk-image
+```
+
 FIXME: solve those restrictions
 Restrictions:
 * This will not work with a raw disk image
