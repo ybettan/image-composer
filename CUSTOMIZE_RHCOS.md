@@ -362,7 +362,6 @@ Then we can
 ```
 make deploy_nodes_with_install NUM_MASTERS=1
 ```
-
 We can validate that test-infra is indeed using the correct iso by making sure the ISO
 file has the same size as our ISO.
 ```
@@ -404,16 +403,30 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | g
 ### Running with assisted-service and a custom disk image
 
 Start assisted-service using `make run` in assisted-test-infra.
+We can also deploy assisted using `aicli`.
 
 Create a new infra-env and then download the discovery ignition
 ```
-curl <service IP:port>/api/assisted-install/v2/infra-envs/<infra env id>/downloads/files?file_name=discovery.ign -o discovery.ign
+aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
+aicli download discovery-ignition <infraenv id> --path rhcos-disk-image.ign
 ```
+
+IMPORTANT: The ignition must be <vm name>.ign in order for `kcli` to bake it into the VM.
 
 Now we will spawn a VM with a custome disk image to boot
 
-We will use [vm-create-rhcos-disk-image](./vm-create-rhcos-disk-image) to boot the machine.
+We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
+```
+kcli create plan -f rhcos-disk-image.yml
+```
 
+We can get the console and SSH to the machine using
+```
+kcli console --serial rhcos-disk-image
+kcli ssh rhcos-disk-image
+```
+
+FIXME: solve those restrictions
 Restrictions:
 * This will not work with a raw disk image
 * This will not work with PXE
