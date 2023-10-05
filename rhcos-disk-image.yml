@@ -1,6 +1,10 @@
 rhcos-disk-image:
- image: rhcos-413.92.202309181330-0-qemu.x86_64.qcow2
- uefi: true
- disks: [40]
- numcpus: 8
- memory: 16384
+  uefi: true
+  boot_order: true
+  disks:
+    - size: 30
+    - size: 30
+      image: rhcos-413.92.202309181330-0-qemu.x86_64.qcow2
+  numcpus: 8
+  memory: 16384
+  ignition_file: rhcos-disk-image.ign

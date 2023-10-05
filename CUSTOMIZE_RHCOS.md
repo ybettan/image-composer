@@ -408,9 +408,11 @@ We can also deploy assisted using `aicli`.
 Create a new infra-env and then download the discovery ignition
 ```
 aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
-aicli download discovery-ignition <infraenv id> --path rhcos-disk-image.ign
+aicli download discovery-ignition <infraenv>
 ```
+and rename the ignition file to be the same as the VM name `rhcos-disk-image.ign`
 
+FIXME: is it still a requirement after https://github.com/karmab/kcli/commit/91208e02a0b3bc04f5eb1e7c7fcd8f6f77776e63?
 IMPORTANT: The ignition must be <vm name>.ign in order for `kcli` to bake it into the VM.
 
 Now we will spawn a VM with a custome disk image to boot
@@ -439,6 +441,7 @@ aicli start cluster custom-rhcos-disk-image
 
 FIXME: solve those restrictions
 Restrictions:
+* The machine must have a least 2 disks, one for booting and one for writing RHCOS to it.
 * This will not work with a raw disk image
 * This will not work with PXE
 
