@@ -354,7 +354,7 @@ sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
 Now we need to create the `MachineConfig` manifest and add it to assisted
 ```
 mkdir -p ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift
-cp machineconfig.yaml ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift/
+cp manifests/machineconfig.yaml ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift/
 export CUSTOM_MANIFESTS_FILES=$(realpath ~/go/src/github.com/assisted-test-infra/custom_manifests)
 ```
 
@@ -402,12 +402,52 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | g
 
 ### Running with assisted-service and a custom disk image
 
+##### Deploying assisted-installer
+
 Start assisted-service using `make run` in assisted-test-infra.
 We can also deploy assisted using `aicli`.
 
-Create a new infra-env and then download the discovery ignition
+Configure `aicli` to point to AI's service IP
+```
+export AI_URL=http://<AI IP>:<AI port>
+```
+
+##### Creating a cluster/infra-env
+
+Create a new infra-env
 ```
 aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
+```
+
+##### Add a MachineConfig manifest to the cluster
+
+During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
+in the release payload, since we are running a custom disk image, we need to let MCO know what custom
+image we are using to prevent it from overriding our changes.
+
+This is done by adding a `MachineConfig` manifest to the cluster installation.
+
+First we need to copy the custom ociarchive file to a container image registry
+```
+sudo podman login quay.io
+mkdir rhcos-image-spec
+tar -xvf rhcos-<version>-ostree.x86_64.ociarchive -C rhcos-image-spec
+sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
+```
+
+Make sure to update the `osImageURL` in [machineconfig.yaml](./manifests/machineconfig.yaml) with the new image.
+
+Add the `MachineConfig` manifest to the cluster
+```
+aicli add manifest --dir manifests custom-rhcos-disk-image
+aicli list manifests custom-rhcos-disk-image
+```
+
+##### Creating a VM and start the discovery phase
+
+Download the discovery ignition
+```
+aicli list infraenvs
 aicli download discovery-ignition <infraenv>
 ```
 and rename the ignition file to be the same as the VM name `rhcos-disk-image.ign`
@@ -428,19 +468,59 @@ kcli console --serial rhcos-disk-image
 kcli ssh rhcos-disk-image
 ```
 
-Now we need to wait for the cluster to be in the following status
+Now we need to wait for the node to be in the following status
+```
+status: known
+status_info: Host is ready to be installed
+```
+
+and the cluster to be in the following status
 ```
 status: ready
 status_info: Cluster ready to be installed
 ```
+
+##### Install the cluster
 
 and then we can install the cluster using
 ```
 aicli start cluster custom-rhcos-disk-image
 ```
 
+We can check the installation progresss usin
+```
+aicli info cluster custom-rhcos-disk-image | yq '.progress'
+```
+
+##### Check the new cluster
+
+Get the kubeconfig
+```
+aicli download kubeconfig custom-rhcos-disk-image
+```
+
+Add the cluster domain and VM IP to `/etc/hosts`
+* cluster domain can be found using `cat $KUBECONFIG | grep server`
+* VM IP can be found using `kcli list vms`
+
+We can make sure that the `MachineConfig` exist in the cluster
+```
+```
+
+Also we can make sure we have the custom OS image
+```
+root image-composer (devel) $ oc debug node/rhcos-disk-image
+
+sh-4.4# chroot /host
+sh-5.1#
+
+sh-5.1# cat /etc/ybettan.txt
+ybettan
+```
+
+##### Restrictions
+
 FIXME: solve those restrictions
-Restrictions:
 * The machine must have a least 2 disks, one for booting and one for writing RHCOS to it.
 * This will not work with a raw disk image
 * This will not work with PXE
