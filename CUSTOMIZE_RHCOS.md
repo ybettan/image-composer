@@ -405,7 +405,7 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | g
 
 ##### Building the disk-image
 
-Follow the [build-steps](#Add overrides to the config repo - initramFS) to build the kernel-module
+Follow the [build-steps](https://github.com/ybettan/image-composer/blob/devel/CUSTOMIZE_RHCOS.md#add-overrides-to-the-config-repo---initramfs) to build the kernel-module
 and then build the disk image using `cosa build qemu` instead of `cosa build metal metal4k` as mentioned.
 
 ##### Deploying assisted-installer
