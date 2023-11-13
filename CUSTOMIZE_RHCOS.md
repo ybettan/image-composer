@@ -161,8 +161,9 @@ The following steps might need to be done on the host or in a dedicated containe
 
 We should also install the kernel packages required for this version
 ```
-sudo dnf install -y kernel-devel-${KERNEL_VERSION}
-sudo dnf install -y kernel-modules-${KERNEL_VERSION}
+sudo dnf install -y \
+    kernel-devel-${KERNEL_VERSION} \
+    kernel-modules-${KERNEL_VERSION}
 ```
 If they don't exist on the machine, check the yum repos url and download the RPM manually
 I have used this command to find the correct repo url
@@ -402,6 +403,11 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | g
 
 ### Running with assisted-service and a custom disk image
 
+##### Building the disk-image
+
+Follow the [build-steps](#Add overrides to the config repo - initramFS) to build the kernel-module
+and then build the disk image using `cosa build qemu` instead of `cosa build metal metal4k` as mentioned.
+
 ##### Deploying assisted-installer
 
 Start assisted-service using `make run` in assisted-test-infra.
@@ -458,6 +464,7 @@ IMPORTANT: The ignition must be <vm name>.ign in order for `kcli` to bake it int
 Now we will spawn a VM with a custome disk image to boot
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
+Make sure to update the disk reference in [rhcos-disk-image.yml](./rhcos-disk-image.yml)
 ```
 kcli create plan -f rhcos-disk-image.yml
 ```
@@ -505,6 +512,9 @@ Add the cluster domain and VM IP to `/etc/hosts`
 
 We can make sure that the `MachineConfig` exist in the cluster
 ```
+root image-composer (devel) $ oc get mc/99-ybettan-external-image
+NAME                        GENERATEDBYCONTROLLER   IGNITIONVERSION   AGE
+99-ybettan-external-image                                             76m
 ```
 
 Also we can make sure we have the custom OS image
@@ -514,8 +524,8 @@ root image-composer (devel) $ oc debug node/rhcos-disk-image
 sh-4.4# chroot /host
 sh-5.1#
 
-sh-5.1# cat /etc/ybettan.txt
-ybettan
+sh-5.1# lsmod | grep kmm
+kmm_ci_a               16384  0
 ```
 
 ##### Restrictions
