@@ -4,7 +4,7 @@ rhcos-disk-image:
   disks:
     - size: 30
     - size: 30
-      image: rhcos-413.92.202311130919-0-qemu.x86_64.qcow2
+      image: rhcos-413.92.202311131205-0-qemu.x86_64.qcow2
   numcpus: 8
   memory: 16384
   ignition_file: rhcos-disk-image.ign

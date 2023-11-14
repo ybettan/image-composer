@@ -522,10 +522,19 @@ Also we can make sure we have the custom OS image
 root image-composer (devel) $ oc debug node/rhcos-disk-image
 
 sh-4.4# chroot /host
-sh-5.1#
+
+sh-5.1# rpm-ostree status
+State: idle
+Deployments:
+* ostree-unverified-registry:quay.io/ybettan/rhcos:413.92.202311131205-0
+                   Digest: sha256:21641a7551be7e9635f6809cab2b82b68eef5f1331a34a3171238cf38f36b280
+                  Version: 413.92.202311131205-0 (2023-11-13T12:07:51Z)
 
 sh-5.1# lsmod | grep kmm
 kmm_ci_a               16384  0
+
+sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/initramfs.img | grep kmm_ci_a
+-rw-r--r--   1 root     root        67608 Jan  1  1970 usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/kmm_ci_a.ko
 ```
 
 ##### Restrictions
