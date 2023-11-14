@@ -168,7 +168,7 @@ sudo dnf install -y \
 If they don't exist on the machine, check the yum repos url and download the RPM manually
 I have used this command to find the correct repo url
 ```
-cat src/config/manifest-rhel-9.2.yaml | grep repo | grep server-ose
+cat src/yumrepos/rhel-9.2.repo
 ```
 
 Now, let us build the kernel module:
