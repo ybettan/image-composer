@@ -544,6 +544,36 @@ FIXME: solve those restrictions
 * This will not work with a raw disk image
 * This will not work with PXE
 
+### Upgrades
+
+In both cases, custom ISOs and customer disk-image the upgrade process is very easy. All we need to
+do is to build a new container image using `cosa build container` and edit the `MachineConfig`
+in the cluster to point to the new container image.
+
+After the reboot, we can validtae that everything went well on the node
+```
+root image-composer (devel) $ oc debug node/rhcos-disk-image
+
+sh-4.4# chroot /host
+
+sh-5.1# rpm-ostree status
+State: idle
+Deployments:
+* ostree-unverified-registry:quay.io/ybettan/rhcos:413.92.202311151050-0
+                   Digest: sha256:a5e7dc2e5dc65fe5442b8bf351db3d06033cc65a215f4b455059523fdbc18078
+                  Version: 413.92.202311151050-0 (2023-11-15T11:08:03Z)
+
+sh-5.1# lsmod | grep kmm
+kmm_ci_a               16384  0
+
+sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/initramfs.img | grep kmm_ci_a
+-rw-r--r--   1 root     root        67608 Jan  1  1970 usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/kmm_ci_a.ko
+
+# And indeed the new kmod is loaded
+sh-5.1# dmesg | grep kmm | grep "Loaded kmm-ci-a"
+[    1.621551] Hello, World from V2!. Loaded kmm-ci-a.
+```
+
 ### Links
 
 * A [POC](https://gitlab.cee.redhat.com/jmeng/ovs-ci-with-ocp) for modifying OVS and its kernel module with OCP
