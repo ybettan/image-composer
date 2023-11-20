@@ -1,8 +1,21 @@
-# image-composer
+# Table of content
+- [Prerequisites](#prerequisites)
+- [Set env](#set-env)
+- [Build a kernel module](#build-a-kernel-module)
+- [Modifying rootFS](#modifying-rootfs)
+- [Modifying initramFS](#modifying-rootfs)
+- [Building the OS image](#building-the-os-image)
+- [Deploy an OCP cluster with custome nodes](#deploy-an-ocp-cluster-with-custome-nodes)
+- [Upgrades](#upgrades)
+- [Links](#links)
 
-### Prerequisites
+# Prerequisites
 
-The CoreOS-assember (`cosa`) is encapsulated in a container but runs as a privileged container that will create disk images on the host, therefore, all the work is going to be done a VM.
+NOTE: Installing a day-0 network driver using this method will not be supported using iPXE since networking is required
+for pulling the iPXE artifacts.
+
+The CoreOS-assember (`cosa`) is encapsulated in a container but runs as a privileged container
+that will create disk images on the host, therefore, all the work is going to be done a VM.
 
 See [coreos-assembler prerequisites](https://github.com/coreos/coreos-assembler/blob/03dd8da933722902b9775c823af68afa5187f774/docs/building-fcos.md#getting-started---prerequisites)
 
@@ -10,15 +23,17 @@ We will also use [skopeo](https://github.com/containers/skopeo) and [umoci](http
 to in order to extract the last layer of a container image.
 In this demo, we will use skopeo 1.12.0 and umoci 0.4.7
 
+# Set env
+
 FIXME: can we build with FCOS? Is the Registeration of the OS a neccessary step?
-##### Download the RHCOS ISO for the build env
+### Download the RHCOS ISO for the build env
 
 We will download the ISO
 ```
 curl -L https://developers.redhat.com/content-gateway/file/rhel/9.2/rhel-9.2-x86_64-dvd.iso -o rhel-9.2-x86_64-dvd.iso
 ```
 
-##### Install the virtual machine
+### Install the virtual machine
 
 Create a VM using virt-manager with
 * 4 CPUs
@@ -28,9 +43,7 @@ Create a VM using virt-manager with
 NOTE:
 Make sure to SSH as a user, otherwise we won't be able to `cosa fetch`
 
-### Set up the environment
-
-##### SSH to the machine
+### SSH to the machine
 
 Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SSH to it.
 
@@ -38,7 +51,7 @@ Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SS
 ssh <username>@<ip>
 ```
 
-##### Registring the machine to Redhat to get RPM access
+### Registring the machine to Redhat to get RPM access
 
 To get dnf working, you'll need to register with your RH account during kickstart
 or after deployment with subscription-manager register. This can also be done
@@ -54,11 +67,11 @@ subscription-manager list
 
 NOTE: If the connection is hanging, try connecting to SSO before running the command again.
 
-##### Install the Redhat CA
+### Install the Redhat CA
 
 ***We will also need to install the RedHat CA to the machine.***
 
-##### Create working directory
+### Create working directory
 
 ```
 podman pull quay.io/coreos-assembler/coreos-assembler
@@ -70,7 +83,7 @@ mkdir rhcos
 cd rhcos
 ```
 
-##### Defining the cosa alias
+### Defining the cosa alias
 
 Add the following as an alias (don't forget to source `~/.aliases`):
 ```
@@ -121,12 +134,12 @@ The environment variables are special purpose:
 * `COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS`: Allows for adding arbitrary mounts or args to the container runtime.
 * `COREOS_ASSEMBLER_CONTAINER`: Allows for overriding the default assembler container which is currently quay.io/coreos-assembler/coreos-assembler:latest.
 
-##### Running persistently
+### Running persistently
 
 At this point, try `cosa shell` to start a shell inside the container.
 From here, you can run `cosa ...` to invoke build commands.
 
-##### Initializing
+### Initializing
 
 We need to make sure to point to the RHEL yum repositories and using the CA on the machine
 ```
@@ -147,9 +160,7 @@ cosa init --yumrepos "${RHCOS_REPO}" --variant rhel-9.2 --branch release-4.13 ht
 The specified git repository will be cloned into `$PWD/src/config/`.
 We can see other directories created such as `builds`, `cache`, `overrides` and `tmp`.
 
-### Generate a falvored RHCOS ISO by changing the config repo
-
-##### Build a kernel module to be added to RHCOS
+# Build a kernel module
 
 First we need to find what kernel version we are building our ISO with.
 ```
@@ -179,7 +190,7 @@ cd kernel-module-management/ci/kmm-kmod/
 KERNEL_SRC_DIR=/lib/modules/${KERNEL_VERSION}/build make all
 ```
 
-##### Add overrides to the config repo - rootFS
+# Modifying rootFS
 
 Go back to the `cosa shell` and make sure to copy the relevant files.
 
@@ -218,20 +229,7 @@ overrides/
 9 directories, 2 files
 ```
 
-Now we can generate the ISO
-```
-cosa build metal metal4k
-cosa buildextend-live
-```
-
-Running a VM with that ISO should load the kernel module at boot. It can be validated
-using
-```
-lsmod | grep kmm_ci_a
-```
-in the VM.
-
-##### Add overrides to the config repo - initramFS
+# Modifying initramFS
 
 Go back to the `cosa shell` and make sure to copy the relevant files.
 
@@ -270,27 +268,53 @@ overrides/
 9 directories, 2 files
 ```
 
-Now we can generate the ISO
+# Building the OS image
+
+There are usually 2 artifacts needes for customizing RHCOS in OCP
+1. The OS image - can be a disk-image or an ISO
+2. A conatiner image - this container image is the container representation of the OS image conaining an ostree commit
+
+### Building the container image
+
+Firt we need to build the `.ociarchive` file
+```
+cosa build container
+```
+
+Now we can build the container image out of it
+```
+sudo podman login quay.io
+mkdir rhcos-image-spec
+tar -xvf builds/latest/x86_64/rhcos-<...>-ostree.x86_64.ociarchive -C rhcos-image-spec
+sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
+```
+
+### Building a raw disk-image
+
+To get a .raw disk-image, used for bare metal nodes we will run
+```
+cosa build metal
+```
+This command will also generate the `.ociarchive` file and use it to generate the `.raw` disk-image.
+
+### Building a qcow2 disk-image
+
+To get a .qcow2 disk-image, used for Qemu nodes we will run
+```
+cosa build qemu
+```
+This command will also generate the `.ociarchive` file and use it to generate the `.qcow2` disk-image.
+
+### Building an ISO
+
+To get an ISO we first need to build the raw disk-images for metal and metal4k nodes
+It will also generate the `.ociarchive` file and use it to build the images.
 ```
 cosa build metal metal4k
 cosa buildextend-live
 ```
 
-Before running the ISO, let's make sure that our `.ko` file has been added to
-the initramfs
-```
-lsinitrd builds/latest/x86_64/rhcos-413.92.202307120939-0-live-initramfs.x86_64.img | grep kmm_ci_a
--rw-r--r--   1 root     root        67704 Jan  1  1970 usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/kmm_ci_a.ko
-```
-
-Running a VM with that ISO should load the kernel module at boot. It can be validated
-using
-```
-lsmod | grep kmm_ci_a
-```
-in the VM.
-
-### Test the ISO
+##### Test the ISO locally
 
 ```
 cosa run --qemu-iso builds/latest/x86_64/rhcos-<...>-live.x86_64.iso
@@ -302,20 +326,62 @@ To exit, type `Ctrl-a x`. For more options, type `Ctrl-a ?`.
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running)
 
-### Running with assisted-test-infra
+# Deploy an OCP cluster with custome nodes
+
+### Deploy assisted-service
+
+FIXME: should we use `aicli create onprem` to deploy assisted instead?
+We will use [assisted-test-infra](https://github.com/openshift/assisted-test-infra)
+to deploy assisted-service locally using [minikube](https://minikube.sigs.k8s.io/docs/)
 
 The default iso type is `minimal-iso` and we built a full-iso so we need to change it.
+We should then deploy the service
 ```
 export ISO_IMAGE_TYPE=full-iso
-```
-
-Run assisted-service
-```
-export PULL_SECRET=...
+export PULL_SECRET=<pull-secret>
 make setup
 make run
 ```
 
+We can validate that `assisted-service` is deployed correctly using
+```
+oc get pods -n assisted-installer
+```
+
+Create a new cluster
+```
+aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
+```
+
+### Create the cluster
+
+Now that we have the service running we can use [aicli](https://github.com/karmab/aicli) to interact with it.
+
+Configure `aicli` to point to AI's service IP
+```
+export AI_URL=http://<AI IP>:<AI port>
+```
+
+During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
+in the release payload, since we are running a custom disk image, we need to let MCO know what custom
+image we are using to prevent it from overriding our changes.
+
+This is done by adding a `MachineConfig` manifest to the cluster installation.
+Make sure to update the `osImageURL` in [machineconfig.yaml](./manifests/machineconfig.yaml) with the
+custom container image previously built in [Building the OS image](#building-the-os-image).
+
+Add the `MachineConfig` manifest to the cluster
+```
+aicli add manifest --dir manifests custom-rhcos-disk-image
+aicli list manifests custom-rhcos-disk-image
+```
+
+### Nodes discovery
+
+##### Using a custom ISO
+
+FIXME: even better, just boot the VM with the ISO
+FIXME: the correct way to do it is to configure assisted-image-service to server an ISO from another web-server isntead of mounting it.
 Mount the custom ISO to the `assisted-image-service` pod and make sure to override
 `data/rhcos-full-iso-...-x86_64.iso` (keep the same name) with the custom ISO.
 
@@ -339,27 +405,7 @@ We will also need the `minikube cp` command to copy the ISO to the minikube VM.
 minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202307060850-0-live.x86_64.iso
 ```
 
-We also need to create a `MachineConfig` manifest to override the image in MCO.
-MCO is overriding the node image with the `rhel-coreos` (previously called `machine-os-content`)
-from the release image, therefore, we need to make sure MCO is aware we are
-overriding the node image.
-
-We need to build the container image first
-```
-sudo podman login quay.io
-mkdir rhcos-image-spec
-tar -xvf builds/latest/x86_64/rhcos-<...>-ostree.x86_64.ociarchive -C rhcos-image-spec
-sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
-```
-
-Now we need to create the `MachineConfig` manifest and add it to assisted
-```
-mkdir -p ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift
-cp manifests/machineconfig.yaml ~/go/src/github.com/assisted-test-infra/custom_manifests/openshift/
-export CUSTOM_MANIFESTS_FILES=$(realpath ~/go/src/github.com/assisted-test-infra/custom_manifests)
-```
-
-Then we can
+Now, when installation the cluster, assisted-service will serve the derived ISO.
 ```
 make deploy_nodes_with_install NUM_MASTERS=1
 ```
@@ -369,87 +415,9 @@ file has the same size as our ISO.
 ls -lh /tmp/test_images/
 ```
 
-Once the cluster installed we can validate that our kernel-module is indeed installed
-```
-root assisted-test-infra (master) $ oc get nodes
-NAME                                   STATUS   ROLES                         AGE   VERSION
-test-infra-cluster-2d9248b4-master-0   Ready    control-plane,master,worker   47m   v1.26.6+a7ee68b
+##### Using a custom disk-image
 
-root assisted-test-infra (master) $ oc debug node/test-infra-cluster-2d9248b4-master-0
-Starting pod/test-infra-cluster-2d9248b4-master-0-debug ...
-To use host binaries, run `chroot /host`
-Pod IP: 192.168.127.10
-If you don't see a command prompt, try pressing enter.
-
-sh-4.4# chroot /host
-
-sh-5.1# rpm-ostree status
-State: idle
-Deployments:
-* ostree-unverified-registry:quay.io/ybettan/rhcos:413.92.202307060850-0
-                   Digest: sha256:39c0aaa7baae5799d7eca830f230a486b62712e742aabd466f6ce0e16712a6c9
-                  Version: 413.92.202307060850-0 (2023-07-10T08:02:35Z)
-
-sh-5.1# lsmod | grep kmm
-kmm_ci_a               16384  0
-```
-
-And if the kernel-module was installed at the initramfs stage we can also validate
-that our `.ko` file is part of the `initramfs.img`
-```
-sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/initramfs.img | grep kmm_ci_a
--rw-r--r--   1 root     root        67704 Jan  1  1970 usr/lib/modules/5.14.0-284.22.1.el9_2.x86_64/kmm_ci_a.ko
-```
-
-### Running with assisted-service and a custom disk image
-
-##### Building the disk-image
-
-Follow the [build-steps](https://github.com/ybettan/image-composer/blob/devel/CUSTOMIZE_RHCOS.md#add-overrides-to-the-config-repo---initramfs) to build the kernel-module
-and then build the disk image using `cosa build qemu` instead of `cosa build metal metal4k` as mentioned.
-
-##### Deploying assisted-installer
-
-Start assisted-service using `make run` in assisted-test-infra.
-We can also deploy assisted using `aicli`.
-
-Configure `aicli` to point to AI's service IP
-```
-export AI_URL=http://<AI IP>:<AI port>
-```
-
-##### Creating a cluster/infra-env
-
-Create a new infra-env
-```
-aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
-```
-
-##### Add a MachineConfig manifest to the cluster
-
-During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
-in the release payload, since we are running a custom disk image, we need to let MCO know what custom
-image we are using to prevent it from overriding our changes.
-
-This is done by adding a `MachineConfig` manifest to the cluster installation.
-
-First we need to copy the custom ociarchive file to a container image registry
-```
-sudo podman login quay.io
-mkdir rhcos-image-spec
-tar -xvf rhcos-<version>-ostree.x86_64.ociarchive -C rhcos-image-spec
-sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
-```
-
-Make sure to update the `osImageURL` in [machineconfig.yaml](./manifests/machineconfig.yaml) with the new image.
-
-Add the `MachineConfig` manifest to the cluster
-```
-aicli add manifest --dir manifests custom-rhcos-disk-image
-aicli list manifests custom-rhcos-disk-image
-```
-
-##### Creating a VM and start the discovery phase
+NOTE: The machine must have a least 2 disks, one for booting and one as a target disk for writing RHCOS.
 
 Download the discovery ignition
 ```
@@ -487,9 +455,14 @@ status: ready
 status_info: Cluster ready to be installed
 ```
 
-##### Install the cluster
+To get the statuses we can use
+```
+aicli info <cluster|host> <name>
+```
 
-and then we can install the cluster using
+### Cluster installation
+
+Once the cluster is ready to be installed, we can install it using
 ```
 aicli start cluster custom-rhcos-disk-image
 ```
@@ -499,7 +472,7 @@ We can check the installation progresss usin
 aicli info cluster custom-rhcos-disk-image | yq '.progress'
 ```
 
-##### Check the new cluster
+### Cluster validation
 
 Get the kubeconfig
 ```
@@ -532,23 +505,29 @@ Deployments:
 
 sh-5.1# lsmod | grep kmm
 kmm_ci_a               16384  0
+```
 
+and if the initramFS in the image was rebuilt in the custom image, we can also make sure that the initramFS image
+indeed include our kernel module - to make sure it was loaded at the initramFS stage of the booting process and
+not later on
+```
 sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/initramfs.img | grep kmm_ci_a
 -rw-r--r--   1 root     root        67608 Jan  1  1970 usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/kmm_ci_a.ko
 ```
 
-##### Restrictions
+When upgrading the kmod to a newer version, we can also check the dmesg
+```
+sh-5.1# dmesg | grep kmm | grep "Loaded kmm-ci-a"
+[    1.621551] Hello, World from V2!. Loaded kmm-ci-a.
+```
 
-FIXME: solve those restrictions
-* The machine must have a least 2 disks, one for booting and one for writing RHCOS to it.
-* This will not work with a raw disk image
-* This will not work with PXE
+# Upgrades
 
-### Upgrades
+### Nodes upgrade
 
-In both cases, custom ISOs and customer disk-image the upgrade process is very easy. All we need to
-do is to build a new container image using `cosa build container` and edit the `MachineConfig`
-in the cluster to point to the new container image.
+In both cases, custom ISOs and custome disk-image the upgrade process is very easy. All we need to
+do is to build a new container image as described in [Building the container image](#building-the-container-image)
+and edit the `MachineConfig` in the cluster to point to the new container image.
 
 After the reboot, we can validtae that everything went well on the node
 ```
@@ -574,6 +553,10 @@ sh-5.1# dmesg | grep kmm | grep "Loaded kmm-ci-a"
 [    1.621551] Hello, World from V2!. Loaded kmm-ci-a.
 ```
 
-### Links
+### Cluster upgrade
+
+FIXME: add content
+
+# Links
 
 * A [POC](https://gitlab.cee.redhat.com/jmeng/ovs-ci-with-ocp) for modifying OVS and its kernel module with OCP
