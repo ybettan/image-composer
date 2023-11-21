@@ -380,7 +380,6 @@ aicli list manifests custom-rhcos-disk-image
 
 ##### Using a custom ISO
 
-FIXME: even better, just boot the VM with the ISO
 FIXME: the correct way to do it is to configure assisted-image-service to server an ISO from another web-server isntead of mounting it.
 Mount the custom ISO to the `assisted-image-service` pod and make sure to override
 `data/rhcos-full-iso-...-x86_64.iso` (keep the same name) with the custom ISO.
@@ -405,14 +404,41 @@ We will also need the `minikube cp` command to copy the ISO to the minikube VM.
 minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202307060850-0-live.x86_64.iso
 ```
 
-Now, when installation the cluster, assisted-service will serve the derived ISO.
+Now we will download the custom ISO (baked with the discovery ignition) from the service
 ```
-make deploy_nodes_with_install NUM_MASTERS=1
+aicli list infraenvs
+aicli download iso <infraenv>
 ```
-We can validate that test-infra is indeed using the correct iso by making sure the ISO
-file has the same size as our ISO.
+
+Now we will spawn a VM with a custome ISO to boot
+
+We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
+Make sure to update the disk reference in [rhcos-iso.yml](./rhcos-iso.yml)
 ```
-ls -lh /tmp/test_images/
+kcli create plan -f rhcos-iso.yml
+```
+
+We can get the console and SSH to the machine using
+```
+kcli console --serial rhcos-iso
+kcli ssh rhcos-iso
+```
+
+Now we need to wait for the node to be in the following status
+```
+status: known
+status_info: Host is ready to be installed
+```
+
+and the cluster to be in the following status
+```
+status: ready
+status_info: Cluster ready to be installed
+```
+
+To get the statuses we can use
+```
+aicli info <cluster|host> <name>
 ```
 
 ##### Using a custom disk-image

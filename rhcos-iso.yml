@@ -1,0 +1,7 @@
+rhcos-iso:
+  iso: custom-rhcos-iso_infra-env.iso
+  uefi: true
+  disks:
+    - size: 30
+  numcpus: 8
+  memory: 16384
