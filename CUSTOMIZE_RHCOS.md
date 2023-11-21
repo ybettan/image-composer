@@ -3,7 +3,7 @@
 - [Set env](#set-env)
 - [Build a kernel module](#build-a-kernel-module)
 - [Modifying rootFS](#modifying-rootfs)
-- [Modifying initramFS](#modifying-rootfs)
+- [Modifying initramFS](#modifying-initramfs)
 - [Building the OS image](#building-the-os-image)
 - [Deploy an OCP cluster with custome nodes](#deploy-an-ocp-cluster-with-custome-nodes)
 - [Upgrades](#upgrades)
