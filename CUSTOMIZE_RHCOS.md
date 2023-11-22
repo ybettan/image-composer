@@ -2,8 +2,7 @@
 - [Prerequisites](#prerequisites)
 - [Set env](#set-env)
 - [Build a kernel module](#build-a-kernel-module)
-- [Modifying rootFS](#modifying-rootfs)
-- [Modifying initramFS](#modifying-initramfs)
+- [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image)
 - [Building the OS image](#building-the-os-image)
 - [Deploy an OCP cluster with custome nodes](#deploy-an-ocp-cluster-with-custome-nodes)
 - [Upgrades](#upgrades)
@@ -190,7 +189,17 @@ cd kernel-module-management/ci/kmm-kmod/
 KERNEL_SRC_DIR=/lib/modules/${KERNEL_VERSION}/build make all
 ```
 
-# Modifying rootFS
+# Defining OS changes before building an OS image
+
+The 2 main approaches of modifying the OS in this context are to modify the rootFS
+or the initramFS image.
+
+As part of the boot process, the initramFS is used as a temporary filesystem that
+loads fundamental drivers such as storage or network drivers before mounting the
+rootFS, therefore, in some cases we will need to re-build the initramFS image
+instead of just modifying the rootFS.
+
+### Modifying rootFS
 
 Go back to the `cosa shell` and make sure to copy the relevant files.
 
@@ -229,7 +238,7 @@ overrides/
 9 directories, 2 files
 ```
 
-# Modifying initramFS
+### Modifying initramFS
 
 Go back to the `cosa shell` and make sure to copy the relevant files.
 
