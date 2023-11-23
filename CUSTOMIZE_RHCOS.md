@@ -357,11 +357,6 @@ We can validate that `assisted-service` is deployed correctly using
 oc get pods -n assisted-installer
 ```
 
-Create a new cluster
-```
-aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
-```
-
 ### Create the cluster
 
 Now that we have the service running we can use [aicli](https://github.com/karmab/aicli) to interact with it.
@@ -369,6 +364,11 @@ Now that we have the service running we can use [aicli](https://github.com/karma
 Configure `aicli` to point to AI's service IP
 ```
 export AI_URL=http://<AI IP>:<AI port>
+```
+
+Create a new cluster
+```
+aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
 ```
 
 During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
@@ -389,29 +389,28 @@ aicli list manifests custom-rhcos-disk-image
 
 ##### Using a custom ISO
 
-FIXME: the correct way to do it is to configure assisted-image-service to server an ISO from another web-server isntead of mounting it.
-Mount the custom ISO to the `assisted-image-service` pod and make sure to override
-`data/rhcos-full-iso-...-x86_64.iso` (keep the same name) with the custom ISO.
+assisted-image-service is pulling RHCOS from the official repo, therefore, we
+need to configure it to pull our custom RHCOS image from an http server that we
+will deploy to serve our ISO.
 
-Here is a reference to mounting a local directory
+First, we will copy the ISO to minikube's VM to be mounted to our http server.
 ```
-spec:
-  containers:
-  - name: ...
-    image: ...
-    volumeMounts:
-    - name: host-mount
-      mountPath: /isos
-  volumes:
-  - name: host-mount
-    hostPath:
-      path: /home/docker/isos
+minikube cp rhcos-413.92.202311210854-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202311210854-0-live.x86_64.iso
 ```
 
-We will also need the `minikube cp` command to copy the ISO to the minikube VM.
+Second, we will deploy our HTTP server to serve our ISO
 ```
-minikube cp ../image-composer/rhcos-413.92.202307060850-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202307060850-0-live.x86_64.iso
+oc apply -f http-iso-server.yaml
 ```
+
+and finally, we need to configure `assisted-image-service` to pick the RHCOS ISO from
+our HTTP server instead of the one from the openshift registry.
+```
+oc edit cm/assisted-service-config -n assisted-installer
+```
+and modify the `data.OS_IMAGES.url` in the relevant arch entry to our HTTP server
+at `http://iso-service/rhcos-413.92.202311210854-0-live.x86_64.iso`.
+Make sure to restart the `assisted-image-service` pod to pick the updates of the ConfigMap.
 
 Now we will download the custom ISO (baked with the discovery ignition) from the service
 ```
@@ -419,7 +418,7 @@ aicli list infraenvs
 aicli download iso <infraenv>
 ```
 
-Now we will spawn a VM with a custome ISO to boot
+Now we will spawn a VM with the custom ISO to boot
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
 Make sure to update the disk reference in [rhcos-iso.yml](./rhcos-iso.yml)
