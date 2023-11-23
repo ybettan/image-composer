@@ -335,7 +335,7 @@ To exit, type `Ctrl-a x`. For more options, type `Ctrl-a ?`.
 
 [go to source](https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md#running)
 
-# Deploy an OCP cluster with custome nodes
+# Deploy an OCP cluster with custom nodes
 
 ### Deploy assisted-service
 
