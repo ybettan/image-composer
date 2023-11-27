@@ -414,16 +414,16 @@ Make sure to restart the `assisted-image-service` pod to pick the updates of the
 
 Now we will download the custom ISO (baked with the discovery ignition) from the service
 ```
-aicli list infraenvs
-aicli download iso <infraenv>
+aicli list clusters
+aicli download iso <cluster>
 ```
 
 Now we will spawn a VM with the custom ISO to boot
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
-Make sure to update the disk reference in [rhcos-iso.yml](./rhcos-iso.yml)
+Make sure to update the disk reference in [rhcos-iso.yaml](./rhcos-iso.yaml)
 ```
-kcli create plan -f rhcos-iso.yml
+kcli create plan -f rhcos-iso.yaml
 ```
 
 We can get the console and SSH to the machine using
@@ -455,8 +455,8 @@ NOTE: The machine must have a least 2 disks, one for booting and one as a target
 
 Download the discovery ignition
 ```
-aicli list infraenvs
-aicli download discovery-ignition <infraenv>
+aicli list clusters
+aicli download discovery-ignition <cluster>
 ```
 and rename the ignition file to be the same as the VM name `rhcos-disk-image.ign`
 
@@ -466,9 +466,9 @@ IMPORTANT: The ignition must be <vm name>.ign in order for `kcli` to bake it int
 Now we will spawn a VM with a custome disk image to boot
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
-Make sure to update the disk reference in [rhcos-disk-image.yml](./rhcos-disk-image.yml)
+Make sure to update the disk reference in [rhcos-disk-image.yaml](./rhcos-disk-image.yaml)
 ```
-kcli create plan -f rhcos-disk-image.yml
+kcli create plan -f rhcos-disk-image.yaml
 ```
 
 We can get the console and SSH to the machine using
