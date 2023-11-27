@@ -458,10 +458,6 @@ Download the discovery ignition
 aicli list clusters
 aicli download discovery-ignition <cluster>
 ```
-and rename the ignition file to be the same as the VM name `rhcos-disk-image.ign`
-
-FIXME: is it still a requirement after https://github.com/karmab/kcli/commit/91208e02a0b3bc04f5eb1e7c7fcd8f6f77776e63?
-IMPORTANT: The ignition must be <vm name>.ign in order for `kcli` to bake it into the VM.
 
 Now we will spawn a VM with a custome disk image to boot
 

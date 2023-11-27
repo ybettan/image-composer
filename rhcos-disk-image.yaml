@@ -7,4 +7,4 @@ rhcos-disk-image:
       image: rhcos-413.92.202311131205-0-qemu.x86_64.qcow2
   numcpus: 8
   memory: 16384
-  ignition_file: rhcos-disk-image.ign
+  ignition_file: discovery.ign.custom-rhcos-disk-image
