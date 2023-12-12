@@ -39,9 +39,6 @@ Create a VM using virt-manager with
 * 4GB of RAM
 * 40GB of disk
 
-NOTE:
-Make sure to SSH as a user, otherwise we won't be able to `cosa fetch`
-
 ### SSH to the machine
 
 Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SSH to it.
@@ -49,6 +46,8 @@ Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SS
 ```
 ssh <username>@<ip>
 ```
+NOTE:
+Make sure to SSH as a user, otherwise we won't be able to `cosa fetch`
 
 ### Registring the machine to Redhat to get RPM access
 
@@ -65,10 +64,6 @@ subscription-manager list
 ```
 
 NOTE: If the connection is hanging, try connecting to SSO before running the command again.
-
-### Install the Redhat CA
-
-***We will also need to install the RedHat CA to the machine.***
 
 ### Create working directory
 
@@ -138,6 +133,10 @@ The environment variables are special purpose:
 At this point, try `cosa shell` to start a shell inside the container.
 From here, you can run `cosa ...` to invoke build commands.
 
+### Install the Redhat CA
+
+***We will also need to install the RedHat CA to the machine.***
+
 ### Initializing
 
 We need to make sure to point to the RHEL yum repositories and using the CA on the machine
@@ -149,8 +148,7 @@ export RHCOS_REPO="<...>"
 Initializing will clone the specified configuration repo, and create various directories/state such as the OSTree repository.
 
 Note:
-We might need to enable VPN and added the domain name to `/etc/hosts`.
-Try to run the command and add what's needed based on the error.
+We will need to enable VPN.
 
 ```
 cosa init --yumrepos "${RHCOS_REPO}" --variant rhel-9.2 --branch release-4.13 https://github.com/openshift/os.git
