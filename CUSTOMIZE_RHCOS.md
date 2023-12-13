@@ -296,7 +296,22 @@ tar -xvf builds/latest/x86_64/rhcos-<...>-ostree.x86_64.ociarchive -C rhcos-imag
 sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
 ```
 
-### Building a raw disk-image
+### Building a disk-image
+
+[coreos-installer](https://coreos.github.io/coreos-installer/)
+expects a raw disk-image to be present during the installation.
+
+When using an ISO for the installation, its easy because the ISO contain
+a raw disk image in it but when we build a disk-image, we have to embed a raw
+disk-image in it manually by:
+1. Build a raw disk image with our changes
+2. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image)
+3. Build the final raw/qcow2 disk-image
+
+If we don't do it then `coreos-installer install` will install FCOS and not the
+booted disk-image.
+
+##### Building a raw disk-image
 
 To get a .raw disk-image, used for bare metal nodes we will run
 ```
@@ -304,7 +319,7 @@ cosa build metal
 ```
 This command will also generate the `.ociarchive` file and use it to generate the `.raw` disk-image.
 
-### Building a qcow2 disk-image
+##### Building a qcow2 disk-image
 
 To get a .qcow2 disk-image, used for Qemu nodes we will run
 ```
