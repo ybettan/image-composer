@@ -191,6 +191,7 @@ I have used this command to find the correct repo url
 ```
 cat src/yumrepos/rhel-9.2.repo
 ```
+and [./kmod/install-kernel-packages.sh](./kmod/install-kernel-packages.sh) to install them.
 
 Now, let us build the kernel module:
 ```
