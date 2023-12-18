@@ -34,14 +34,27 @@ curl -L https://developers.redhat.com/content-gateway/file/rhel/9.2/rhel-9.2-x86
 
 ### Install the virtual machine
 
+Each image will be approximately 10GB so using a smaller VM will require
+pruning previous build regularly. Using a big disk will make thinkgs easier.
+
 Create a VM using virt-manager with
 * 4 CPUs
 * 4GB of RAM
-* 40GB of disk
+* 100GB of disk
+
+We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
+Make sure to update the disk reference in [rhel-iso.yaml](./rhel-iso.yaml)
+```
+kcli create plan -f rhel-iso.yaml
+```
 
 ### SSH to the machine
 
-Use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SSH to it.
+```
+kcli ssh -u ybettan rhel-iso
+```
+
+We can also use `virsh net-dhcp-leases default` in order to get the VM IP and then we can SSH to it.
 
 ```
 ssh <username>@<ip>
@@ -433,7 +446,6 @@ aicli download iso <cluster>
 
 Now we will spawn a VM with the custom ISO to boot
 
-We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
 Make sure to update the disk reference in [rhcos-iso.yaml](./rhcos-iso.yaml)
 ```
 kcli create plan -f rhcos-iso.yaml
