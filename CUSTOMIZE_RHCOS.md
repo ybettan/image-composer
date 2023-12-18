@@ -291,13 +291,13 @@ overrides/
 
 # Building the OS image
 
-There are usually 2 artifacts needes for customizing RHCOS in OCP
+There are usually 2 artifacts needed for customizing RHCOS in OCP
 1. The OS image - can be a disk-image or an ISO
-2. A conatiner image - this container image is the container representation of the OS image conaining an ostree commit
+2. A container image - this container image is the container representation of the OS image containing an ostree commit
 
 ### Building the container image
 
-Firt we need to build the `.ociarchive` file
+First we need to build the `.ociarchive` file
 ```
 cosa build container
 ```
@@ -318,9 +318,10 @@ expects a raw disk-image to be present during the installation.
 When using an ISO for the installation, its easy because the ISO contain
 a raw disk image in it but when we build a disk-image, we have to embed a raw
 disk-image in it manually by:
-1. Build a raw disk image with our changes
+1. Build a raw disk image with our changes following [Building a raw disk-image](#building-a-raw-disk-image)
 2. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image)
-3. Build the final raw/qcow2 disk-image
+3. Build the final raw/qcow2 disk-image following
+[Building a raw disk-image](#building-a-raw-disk-image) or [Building a qcow2 disk-image](#building-a-qcow2-disk-image)
 
 If we don't do it then `coreos-installer install` will install FCOS and not the
 booted disk-image.
