@@ -2,6 +2,6 @@ rhel-iso:
   iso: rhel-9.2-x86_64-dvd.iso
   uefi: true
   disks:
-    - size: 100
+    - size: 200
   numcpus: 4
   memory: 8192

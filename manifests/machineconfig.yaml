@@ -5,4 +5,4 @@ metadata:
     machineconfiguration.openshift.io/role: master
   name: 99-ybettan-external-image
 spec:
-  osImageURL: quay.io/ybettan/rhcos:413.92.202311131205-0
+  osImageURL: quay.io/ybettan/rhcos:414.92.202312191338-0

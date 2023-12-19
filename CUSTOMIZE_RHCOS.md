@@ -40,7 +40,7 @@ pruning previous build regularly. Using a big disk will make thinkgs easier.
 Create a VM using virt-manager with
 * 4 CPUs
 * 4GB of RAM
-* 100GB of disk
+* 200GB of disk
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
 Make sure to update the disk reference in [rhel-iso.yaml](./rhel-iso.yaml)
@@ -164,7 +164,7 @@ Note:
 We will need to enable VPN.
 
 ```
-cosa init --yumrepos "${RHCOS_REPO}" --variant rhel-9.2 --branch release-4.13 https://github.com/openshift/os.git
+cosa init --yumrepos "${RHCOS_REPO}" --variant rhel-9.2 --branch release-4.14 https://github.com/openshift/os.git
 ```
 
 The specified git repository will be cloned into `$PWD/src/config/`.
@@ -319,8 +319,11 @@ When using an ISO for the installation, its easy because the ISO contain
 a raw disk image in it but when we build a disk-image, we have to embed a raw
 disk-image in it manually by:
 1. Build a raw disk image with our changes following [Building a raw disk-image](#building-a-raw-disk-image)
-2. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image)
-3. Build the final raw/qcow2 disk-image following
+2. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image) to `overrides/rootfs/usr/share/<.raw disk-image>`
+FIXME: do we need step 3?
+3. Inside the `cosa` container we will also need to modify the `runvm_with_cache` function in `/usr/lib/coreos-assembler/cmdlib.sh`
+to create a qemu-img with `20G` instead of `10G`
+4. Build the final raw/qcow2 disk-image following
 [Building a raw disk-image](#building-a-raw-disk-image) or [Building a qcow2 disk-image](#building-a-qcow2-disk-image)
 
 If we don't do it then `coreos-installer install` will install FCOS and not the
@@ -396,7 +399,7 @@ export AI_URL=http://<AI IP>:<AI port>
 
 Create a new cluster
 ```
-aicli create cluster -P sno=true -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
+aicli create cluster -P sno=true -P openshift_version=4.14 -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
 ```
 
 During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
@@ -497,7 +500,7 @@ kcli create plan -f rhcos-disk-image.yaml
 We can get the console and SSH to the machine using
 ```
 kcli console --serial rhcos-disk-image
-kcli ssh rhcos-disk-image
+kcli ssh -u core rhcos-disk-image
 ```
 
 Now we need to wait for the node to be in the following status
