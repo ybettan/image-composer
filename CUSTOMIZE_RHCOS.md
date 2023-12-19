@@ -409,6 +409,7 @@ image we are using to prevent it from overriding our changes.
 This is done by adding a `MachineConfig` manifest to the cluster installation.
 Make sure to update the `osImageURL` in [machineconfig.yaml](./manifests/machineconfig.yaml) with the
 custom container image previously built in [Building the OS image](#building-the-os-image).
+Make sure we use the container image representing the `.raw` disk-image and not the `qcow2` disk-image.
 
 Add the `MachineConfig` manifest to the cluster
 ```
@@ -521,6 +522,16 @@ aicli info <cluster|host> <name>
 ```
 
 ### Cluster installation
+
+##### Prerequisites when installing from a disk-image
+
+In case we are installing from a custom disk-image we need to modify the installer
+command to point to the .raw disk image inside the disk image
+```
+aicli update host rhcos-disk-image -P extra_args="--image-file=/usr/share/rhcos-414.92.202312181928-0-metal.x86_64.raw"
+```
+
+##### Installation
 
 Once the cluster is ready to be installed, we can install it using
 ```
