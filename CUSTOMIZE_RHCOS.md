@@ -319,11 +319,8 @@ When using an ISO for the installation, its easy because the ISO contain
 a raw disk image in it but when we build a disk-image, we have to embed a raw
 disk-image in it manually by:
 1. Build a raw disk image with our changes following [Building a raw disk-image](#building-a-raw-disk-image)
-FIXME: compress it to .gz file: see https://redhat-internal.slack.com/archives/C999USB0D/p1649261365945959?thread_ts=1649261014.326869&cid=C999USB0D
-2. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image) to `overrides/rootfs/usr/share/<.raw disk-image>`
-FIXME: do we need step 3?
-3. Inside the `cosa` container we will also need to modify the `runvm_with_cache` function in `/usr/lib/coreos-assembler/cmdlib.sh`
-to create a qemu-img with `20G` instead of `10G`
+2. Compress it using `gzip <filename>`
+3. Add the custom raw disk-image to the `overrides` as described in [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image) to `overrides/rootfs/usr/share/<.raw disk-image>`
 4. Build the final raw/qcow2 disk-image following
 [Building a raw disk-image](#building-a-raw-disk-image) or [Building a qcow2 disk-image](#building-a-qcow2-disk-image)
 
