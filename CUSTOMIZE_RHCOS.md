@@ -4,7 +4,7 @@
 - [Build a kernel module](#build-a-kernel-module)
 - [Defining OS changes before building an OS image](#defining-os-changes-before-building-an-os-image)
 - [Building the OS image](#building-the-os-image)
-- [Deploy an OCP cluster with custome nodes](#deploy-an-ocp-cluster-with-custome-nodes)
+- [Deploy an OCP cluster with custom nodes](#deploy-an-ocp-cluster-with-custom-nodes)
 - [Upgrades](#upgrades)
 - [Links](#links)
 
