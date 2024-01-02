@@ -586,7 +586,7 @@ sh-5.1# lsinitrd /usr/lib/modules/5.14.0-284.40.1.el9_2.x86_64/initramfs.img | g
 
 When upgrading the kmod to a newer version, we can also check the dmesg
 ```
-sh-5.1# dmesg | grep kmm | grep "Loaded kmm-ci-a"
+sh-5.1# dmesg | grep "Loaded kmm-ci-a"
 [    1.621551] Hello, World from V2!. Loaded kmm-ci-a.
 ```
 
