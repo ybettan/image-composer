@@ -6,6 +6,7 @@
 - [Building the OS image](#building-the-os-image)
 - [Deploy an OCP cluster with custom nodes](#deploy-an-ocp-cluster-with-custom-nodes)
 - [Upgrades](#upgrades)
+- [Integration with KMM](#integration-with-kmm)
 - [Links](#links)
 
 # Prerequisites
@@ -624,6 +625,89 @@ sh-5.1# dmesg | grep kmm | grep "Loaded kmm-ci-a"
 ### Cluster upgrade
 
 FIXME: add content
+
+# Integration with KMM
+
+KMM ([Kernel Module Management](https://github.com/rh-ecosystem-edge/kernel-module-management) operator)
+is managing mostly day2 kmods in OCP. In some cases it can also hadle day1 kmods and we can also integrate
+it to manage day0 kmods installed using what we saw in this doc.
+
+### Setting up the integration
+
+A user that wishes to handle over the management of his day0 kmod to KMM will first need to make sure the
+`MachineConfig` can be reconize by KMM, so let's say adding `machineconfiguration.openshift.io/kmm-managed: "true"`
+label to it.
+
+### KMM's responsibility
+
+After the module was create by KMM, all KMM's features will be used by the official KMM's API which is the
+`ModuleDay0`s objects in the cluster.
+
+##### Discovering MachineConfigs and creating Modules
+
+KMM will watch for MachineConfigs in the cluster containing the `machineconfiguration.openshift.io/kmm-managed: "true"`
+label and create a new `ModuleDay0` CR in the cluster for each one of them.
+
+We will have a different controller for this new CRD in KMM.
+
+When KMM need to update the kmod on a spacific node, it will need to extract the container image from the `ModuleDay0`
+and modify the `machineConfig.spec.osImageURL` in the MachineConfig in order to trigger a [node-upgrade](#nodes-upgrade).
+
+##### Role back upon unlabeling MachineConfigs
+
+If a `MachineConfig` is modified by the user to remove the `machineconfiguration.openshift.io/kmm-managed: "true"` label,
+then KMM will delete the `ModuleDay0`.
+
+If the user then wishes to remove the kmod from the node manually, he will need to delete the `MachineConfig`
+which may reboot the node into its previous image (which is supposed to be a vanila RHCOS).
+In some cases, MCO knows how to role back without a reboot.
+
+##### Re-building the kmods
+
+In case a user wish KMM to rebuild the kmod, and therefore, the driver-container, for him, he will need to
+supply the `Dockerfile` in a `configmap` referenced in the `Module`. The final image should be based on an RHCOS
+container image and not a `ubi` image - in other words, the Dockerfile should be identical to the onc generated
+during the ISO/disk-image build with the updated OS and the updated kmod.
+
+##### Signing the kmods
+
+A user will add the `module.moduleLoader.spec.kernelMappings[].sign` section in the module and that's it.
+KMM will pull the unsigned container image (which was copied from the `MachineConfig`), sign it, push it to an
+image registry and set `machineConfig.spec.osImageURL` with the signed image to trigger a potential node reboot.
+
+##### Setting firmware
+
+No much to do here, the user can put his firmware files directly in `/var/lib/firmware` on the nodes
+in the custom container image so the firmware feature of KMM is a bit useless here.
+
+##### Future enhancement
+
+If possible, we can try to just unload/reload the new kmod on the node using `modprobe` in case there are no other
+kmods depending on that day0 kmod in the initramFS stage. This is a very early thinking and might not be feasible
+at all.
+
+##### TODO: to be added
+Since MCO can only apply `MachineConfig`s changes to an entire `MachineConfigPool`,
+we must require that a `ModuleDay0` will target a `MachineConfigPool` as well.
+MCO ties between the `machineconfiguration.openshift.io/role: worker` label on
+the `MachineConfig` and the `node-role.kubernetes.io/worker: ""` label on the
+node.
+
+A customer can always create his own `MachineConfigPool` and add only 1 worker
+to it but I don't think this should be one of our primary concerns ATM for the
+following reasons
+  * assisted-installer will generate the same ISO for all nodes in the cluster
+    anyway so there is no benefit of having finer grained node selector for
+    `ModuleDay0` when assisted doesn't support such resolution on its own.
+  * if a user wishes to have only some worker nodes modified, he will need to
+    create is own `MachineConfigPool` post cluster installation and then update
+    the `machineconfiguration.openshift.io/role: worker` label of the
+    `MachineConfig` to target the new `MachineConfigPool`.
+    This will make MCO role back the nodes that shouldn't be updated to the
+    payload OS.
+    Using layering for only some of the workers will result in a cluster upgrade
+    that only upgrade the nodes that aren't layered which may cause some
+    inconsistency and confusion
 
 # Links
 
