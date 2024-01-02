@@ -425,7 +425,7 @@ will deploy to serve our ISO.
 
 First, we will copy the ISO to minikube's VM to be mounted to our http server.
 ```
-minikube cp rhcos-413.92.202311210854-0-live.x86_64.iso /home/docker/isos/rhcos-413.92.202311210854-0-live.x86_64.iso
+minikube cp rhcos-413.92.202311210854-0-live.x86_64.iso /usr/share/nginx/html/rhcos-413.92.202311210854-0-live.x86_64.iso
 ```
 
 Second, we will deploy our HTTP server to serve our ISO
