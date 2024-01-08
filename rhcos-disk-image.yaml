@@ -2,7 +2,7 @@ rhcos-disk-image:
   uefi: true
   boot_order: true
   disks:
-    - size: 30
+    - size: 120
     - size: 30
       image: rhcos-414.92.202312191338-0-qemu.x86_64.qcow2
   numcpus: 8
