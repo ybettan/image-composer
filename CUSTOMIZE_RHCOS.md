@@ -13,7 +13,7 @@
 NOTE: Installing a day-0 network driver using this method will not be supported using iPXE since networking is required
 for pulling the iPXE artifacts.
 
-The CoreOS-assember (`cosa`) is encapsulated in a container but runs as a privileged container
+The CoreOS-assembler (`cosa`) is encapsulated in a container but runs as a privileged container
 that will create disk images on the host, therefore, all the work is going to be done a VM.
 
 See [coreos-assembler prerequisites](https://github.com/coreos/coreos-assembler/blob/03dd8da933722902b9775c823af68afa5187f774/docs/building-fcos.md#getting-started---prerequisites)
@@ -24,7 +24,7 @@ In this demo, we will use skopeo 1.12.0 and umoci 0.4.7
 
 # Set env
 
-FIXME: can we build with FCOS? Is the Registeration of the OS a neccessary step?
+FIXME: can we build with FCOS? Is the registration of the OS a necessary step?
 ### Download the RHCOS ISO for the build env
 
 We will download the ISO
@@ -35,7 +35,7 @@ curl -L https://developers.redhat.com/content-gateway/file/rhel/9.2/rhel-9.2-x86
 ### Install the virtual machine
 
 Each image will be approximately 10GB so using a smaller VM will require
-pruning previous build regularly. Using a big disk will make thinkgs easier.
+pruning the previous build regularly. Using a big disk will make things easier.
 
 Create a VM using virt-manager with
 * 4 CPUs
@@ -60,17 +60,17 @@ We can also use `virsh net-dhcp-leases default` in order to get the VM IP and th
 ssh <username>@<ip>
 ```
 NOTE:
-Make sure to SSH as a user, otherwise we won't be able to `cosa fetch`
+Make sure to SSH as a user, otherwise, we won't be able to `cosa fetch`
 
-### Registring the machine to Redhat to get RPM access
+### Registring the machine to Red Hat to get RPM access
 
 To get dnf working, you'll need to register with your RH account during kickstart
 or after deployment with subscription-manager register. This can also be done
 via the setting in the VM GUI (in the `About` section).
 
-Login has the form of `ybettan@redhat.com` and the password is the RedHat password (not Kerberos).
+Login has the form of `ybettan@redhat.com` and the password is the Red Hat password (not Kerberos).
 
-We can also do it from terminal using
+We can also do it from the terminal using
 ```
 subscription-manager register
 subscription-manager list
@@ -78,13 +78,13 @@ subscription-manager list
 
 NOTE: If the connection is hanging, try connecting to SSO before running the command again.
 
-### Create working directory
+### Create the working directory
 
 ```
 podman pull quay.io/coreos-assembler/coreos-assembler
 ```
 
-The coreos-assmebler needs a working directory (same as git does).
+The coreos-assembler needs a working directory (same as git does).
 ```
 mkdir rhcos
 cd rhcos
@@ -136,7 +136,7 @@ podman run --rm -ti: standard container invocation
 
 The environment variables are special purpose:
 
-* `COREOS_ASSEMBLER_CONFIG_GIT`: Allows you to specifiy a local directory that contains the configs for the ostree you are trying to compose.
+* `COREOS_ASSEMBLER_CONFIG_GIT`: Allows you to specify a local directory that contains the configs for the ostree you are trying to compose.
 * `COREOS_ASSEMBLER_GIT`: Allows you to specify a local directory that contains the CoreOS Assembler scripts. This allows for quick hacking on the assembler itself.
 * `COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS`: Allows for adding arbitrary mounts or args to the container runtime.
 * `COREOS_ASSEMBLER_CONTAINER`: Allows for overriding the default assembler container which is currently quay.io/coreos-assembler/coreos-assembler:latest.
@@ -146,13 +146,13 @@ The environment variables are special purpose:
 At this point, try `cosa shell` to start a shell inside the container.
 From here, you can run `cosa ...` to invoke build commands.
 
-### Install the Redhat CA
+### Install the Red Hat CA
 
-***We will also need to install the RedHat CA to the machine.***
+***We will also need to install the Red Hat CA to the machine.***
 
 ### Initializing
 
-We need to make sure to point to the RHEL yum repositories and using the CA on the machine
+We need to make sure to point to the RHEL yum repositories and use the CA on the machine
 ```
 export COREOS_ASSEMBLER_ADD_CERTS='y'
 export RHCOS_REPO="<...>"
@@ -172,7 +172,7 @@ We can see other directories created such as `builds`, `cache`, `overrides` and 
 
 # Build a kernel module
 
-First we need to find what kernel version we are building our ISO with.
+First, we need to find what kernel version we are building our ISO with.
 ```
 cosa fetch
 export KERNEL_VERSION=$(sudo grep -rnw cache/pkgcache-repo/ -e CONFIG_BUILD_SALT | cut -d"=" -f2 | cut -d'"' -f2)
@@ -297,7 +297,7 @@ There are usually 2 artifacts needed for customizing RHCOS in OCP
 
 ### Building the container image
 
-First we need to build the `.ociarchive` file
+First, we need to build the `.ociarchive` file
 ```
 cosa build container
 ```
@@ -315,7 +315,7 @@ sudo skopeo copy oci:rhcos-image-spec docker://quay.io/ybettan/rhcos:<version>
 [coreos-installer](https://coreos.github.io/coreos-installer/)
 expects a raw disk-image to be present during the installation.
 
-When using an ISO for the installation, its easy because the ISO contain
+When using an ISO for the installation, it's easy because the ISO contains
 a raw disk image in it but when we build a disk-image, we have to embed a raw
 disk-image in it manually by:
 1. Build a raw disk image with our changes following [Building a raw disk-image](#building-a-raw-disk-image)
@@ -372,7 +372,7 @@ FIXME: should we use `aicli create onprem` to deploy assisted instead?
 We will use [assisted-test-infra](https://github.com/openshift/assisted-test-infra)
 to deploy assisted-service locally using [minikube](https://minikube.sigs.k8s.io/docs/)
 
-The default iso type is `minimal-iso` and we built a full-iso so we need to change it.
+The default ISO type is `minimal-iso` and we built a full-iso so we need to change it.
 We should then deploy the service
 ```
 export ISO_IMAGE_TYPE=full-iso
@@ -400,7 +400,7 @@ Create a new cluster
 aicli create cluster -P sno=true -P openshift_version=4.14 -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
 ```
 
-During the cluster installation MCO will override the node OS based on the `rhel-coreos` container image
+During the cluster installation, MCO will override the node OS based on the `rhel-coreos` container image
 in the release payload, since we are running a custom disk image, we need to let MCO know what custom
 image we are using to prevent it from overriding our changes.
 
@@ -434,7 +434,7 @@ oc apply -f http-iso-server.yaml
 ```
 
 and finally, we need to configure `assisted-image-service` to pick the RHCOS ISO from
-our HTTP server instead of the one from the openshift registry.
+our HTTP server instead of the one from the OpenShift registry.
 ```
 oc edit cm/assisted-service-config -n assisted-installer
 ```
@@ -488,7 +488,7 @@ aicli list clusters
 aicli download discovery-ignition <cluster>
 ```
 
-Now we will spawn a VM with a custome disk image to boot
+Now we will spawn a VM with a custom disk image to boot
 
 We will use [kcli](https://github.com/karmab/kcli) to boot the machine.
 Make sure to update the disk reference in [rhcos-disk-image.yaml](./rhcos-disk-image.yaml)
@@ -536,7 +536,7 @@ Once the cluster is ready to be installed, we can install it using
 aicli start cluster custom-rhcos-disk-image
 ```
 
-We can check the installation progresss usin
+We can check the installation progresss using
 ```
 aicli info cluster custom-rhcos-disk-image | yq '.progress'
 ```
@@ -552,14 +552,14 @@ Add the cluster domain and VM IP to `/etc/hosts`
 * cluster domain can be found using `cat $KUBECONFIG | grep server`
 * VM IP can be found using `kcli list vms`
 
-We can make sure that the `MachineConfig` exist in the cluster
+We can make sure that the `MachineConfig` exists in the cluster
 ```
 root image-composer (devel) $ oc get mc/99-ybettan-external-image
 NAME                        GENERATEDBYCONTROLLER   IGNITIONVERSION   AGE
 99-ybettan-external-image                                             76m
 ```
 
-Also we can make sure we have the custom OS image
+Also, we can make sure we have the custom OS image
 ```
 root image-composer (devel) $ oc debug node/rhcos-disk-image
 
@@ -594,11 +594,11 @@ sh-5.1# dmesg | grep "Loaded kmm-ci-a"
 
 ### Nodes upgrade
 
-In both cases, custom ISOs and custome disk-image the upgrade process is very easy. All we need to
+In both cases, custom ISOs and custom disk-image the upgrade process is very easy. All we need to
 do is to build a new container image as described in [Building the container image](#building-the-container-image)
 and edit the `MachineConfig` in the cluster to point to the new container image.
 
-After the reboot, we can validtae that everything went well on the node
+After the reboot, we can validate that everything went well on the node
 ```
 root image-composer (devel) $ oc debug node/rhcos-disk-image
 
