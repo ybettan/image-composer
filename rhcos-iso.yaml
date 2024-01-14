@@ -1,5 +1,5 @@
 rhcos-iso:
-  iso: custom-rhcos-iso.iso
+  iso: custom-rhcos.iso
   uefi: true
   disks:
     - size: 120

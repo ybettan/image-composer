@@ -397,7 +397,7 @@ export AI_URL=http://<AI IP>:<AI port>
 
 Create a new cluster
 ```
-aicli create cluster -P sno=true -P openshift_version=4.14 -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos-disk-image
+aicli create cluster -P sno=true -P openshift_version=4.14 -P pull_secret=/root/go/src/github.com/pull-secret custom-rhcos
 ```
 
 During the cluster installation, MCO will override the node OS based on the `rhel-coreos` container image
@@ -410,8 +410,8 @@ custom container image previously built in [Building the OS image](#building-the
 
 Add the `MachineConfig` manifest to the cluster
 ```
-aicli add manifest --dir manifests custom-rhcos-disk-image
-aicli list manifests custom-rhcos-disk-image
+aicli add manifest --dir manifests custom-rhcos
+aicli list manifests custom-rhcos
 ```
 
 ### Nodes discovery
@@ -444,7 +444,7 @@ Make sure to restart the `assisted-image-service` pod to pick the updates of the
 Now we will download the custom ISO (baked with the discovery ignition) from the service
 ```
 aicli list clusters
-aicli download iso <cluster>
+aicli download iso custom-rhcos
 ```
 
 Now we will spawn a VM with the custom ISO to boot
@@ -484,7 +484,7 @@ NOTE: The machine must have a least 2 disks, one for booting and one as a target
 Download the discovery ignition
 ```
 aicli list clusters
-aicli download discovery-ignition <cluster>
+aicli download discovery-ignition custom-rhcos
 ```
 
 Now we will spawn a VM with a custom disk image to boot
@@ -532,19 +532,19 @@ aicli update host rhcos-disk-image -P extra_args="--image-file=/usr/share/rhcos-
 
 Once the cluster is ready to be installed, we can install it using
 ```
-aicli start cluster custom-rhcos-disk-image
+aicli start cluster custom-rhcos
 ```
 
 We can check the installation progresss using
 ```
-aicli info cluster custom-rhcos-disk-image | yq '.progress'
+aicli info cluster custom-rhcos | yq '.progress'
 ```
 
 ### Cluster validation
 
 Get the kubeconfig
 ```
-aicli download kubeconfig custom-rhcos-disk-image
+aicli download kubeconfig custom-rhcos
 ```
 
 Add the cluster domain and VM IP to `/etc/hosts`
