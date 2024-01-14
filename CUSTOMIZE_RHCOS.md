@@ -407,7 +407,6 @@ image we are using to prevent it from overriding our changes.
 This is done by adding a `MachineConfig` manifest to the cluster installation.
 Make sure to update the `osImageURL` in [machineconfig.yaml](./manifests/machineconfig.yaml) with the
 custom container image previously built in [Building the OS image](#building-the-os-image).
-Make sure we use the container image representing the `.raw` disk-image and not the `qcow2` disk-image.
 
 Add the `MachineConfig` manifest to the cluster
 ```
